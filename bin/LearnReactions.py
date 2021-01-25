@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import os, sys, argparse
-from nanoreactor import Nanoreactor
+
+import argparse
+import os
 import shutil
+import sys
+
+from nanoreactor import Nanoreactor
+
+__project_bin_dir__ = "/Users/tks32/opt/miniconda3/envs/wfl_test/bin"
+
 
 #==========================#
 #     Parse arguments.     #
@@ -57,7 +64,8 @@ print("#       Reactive MD learning script       #")
 print("#  Use the -h argument for detailed help  #")
 print("#=========================================#\n")
 args = parser.parse_args()
-    
+
+
 def main():
     if not os.path.exists(args.qsin):
         if os.path.exists(args.qsin+'.bz2'):
@@ -65,7 +73,7 @@ def main():
             os.system('bunzip2 %s.bz2' % args.qsin)
     RS = Nanoreactor(**dict(args._get_kwargs())) # _get_kwargs takes the ArgumentParser object and turns it into a dictionary
     RS.Output()
-    shutil.copyfile(os.environ['PATH'].split(os.pathsep)[0] + '/reactions.vmd', './reactions.vmd')
+    shutil.copyfile(os.path.join(__project_bin_dir__, '/reactions.vmd'), './reactions.vmd')
     print("Reaction product identification finished.  color.dat and bonds.dat generated.  Now run: vmd -e reactions.vmd -args %s" % args.xyzin)
 
 
