@@ -5,22 +5,16 @@ Run a Q-Chem geometry optimization.  Save frames where the energy is
 monotonically decreasing and save charges / spins to disk.
 """
 
-from nanoreactor import contact
-from nanoreactor.nanoreactor import commadash
-from nanoreactor.qchem import QChem, tarexit
-from nanoreactor.molecule import *
-from nanoreactor.nifty import _exec, click, monotonic_decreasing
-import networkx as nx
-import traceback
 import argparse
-import time
-import os, sys
-import itertools
-import numpy as np
-from collections import OrderedDict
+
+from nanoreactor.molecule import *
+from nanoreactor.nanoreactor import commadash
+from nanoreactor.nifty import click
+from nanoreactor.qchem import QChem, tarexit
 
 tarexit.tarfnm = 'fragmentid.tar.bz2'
 tarexit.include = ['*']
+
 
 def parse_user_input():
     # Parse user input - run at the beginning.
@@ -33,6 +27,7 @@ def parse_user_input():
     parser.add_argument('--basis', type=str, help='Basis set (required)')
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
+
 
 def main():
     # Get user input.
@@ -57,15 +52,17 @@ def main():
     bondfactor = 0.0
     print("Atoms  QM-BO  Distance")
     for i in range(M.na):
-        for j in range(i+1,M.na):
+        for j in range(i + 1, M.na):
             # Print out the ones that are "almost" bonds.
-            if M.qm_bondorder[i,j] > 0.1:
-                print(("%s%i%s%s%i % .3f % .3f" % (M.elem[i], i, '-' if M.qm_bondorder[i,j] > bo_thresh else ' ', M.elem[j], j, M.qm_bondorder[i,j], np.linalg.norm(M.xyzs[-1][i]-M.xyzs[-1][j]))))
-            if M.qm_bondorder[i,j] > bo_thresh:
-                M.bonds.append((i,j))
+            if M.qm_bondorder[i, j] > 0.1:
+                print(("%s%i%s%s%i % .3f % .3f" % (
+                    M.elem[i], i, '-' if M.qm_bondorder[i, j] > bo_thresh else ' ', M.elem[j], j, M.qm_bondorder[i, j],
+                    np.linalg.norm(M.xyzs[-1][i] - M.xyzs[-1][j]))))
+            if M.qm_bondorder[i, j] > bo_thresh:
+                M.bonds.append((i, j))
                 numbonds += 1
-                if M.qm_bondorder[i,j] <= 1 :
-                    bondfactor += M.qm_bondorder[i,j]
+                if M.qm_bondorder[i, j] <= 1:
+                    bondfactor += M.qm_bondorder[i, j]
                 else:
                     # Count double bonds as 1
                     bondfactor += 1
@@ -83,13 +80,13 @@ def main():
         matoms = subg.nodes()
         frag = M.atom_select(matoms)
         # Determine output file name.
-        fout = os.path.splitext(args.initial)[0]+'.sub_%i' % len(subxyz)+'.xyz'
+        fout = os.path.splitext(args.initial)[0] + '.sub_%i' % len(subxyz) + '.xyz'
         # Assume we are getting the Mulliken charges from the last frame, it's safer.
         # Write the output .xyz file.
         Chg = sum(M.qm_mulliken_charges[-1][matoms])
         SpnZ = sum(M.qm_mulliken_spins[-1][matoms])
-        Spn2 = sum([i**2 for i in M.qm_mulliken_spins[-1][matoms]])
-        frag.comms = ["Molecular formula %s atoms %s from %s charge %+.3f sz %+.3f sz^2 %.3f" % 
+        Spn2 = sum([i ** 2 for i in M.qm_mulliken_spins[-1][matoms]])
+        frag.comms = ["Molecular formula %s atoms %s from %s charge %+.3f sz %+.3f sz^2 %.3f" %
                       (subg.ef(), commadash(subg.nodes()), args.initial, Chg, SpnZ, Spn2)]
         frag.write(fout)
         subxyz.append(fout)
@@ -106,25 +103,27 @@ def main():
             subchg.append(None)
             submult.append(None)
             subvalid.append(False)
-        elif ((nelectron-ispn)/2)*2 != (nelectron-ispn):
+        elif ((nelectron - ispn) / 2) * 2 != (nelectron - ispn):
             print(("Inconsistent charge and spin-z for fragment %s\n" % subg.ef()))
             subchg.append(None)
             submult.append(None)
             subvalid.append(False)
         else:
             subchg.append(ichg)
-            submult.append(ispn+1)
+            submult.append(ispn + 1)
             subvalid.append(True)
     print(("%i/%i subcalculations are valid" % (len(subvalid), sum(subvalid))))
     for i in range(len(subxyz)):
-        print(("%s formula %-12s charge %i mult %i %s" % (subxyz[i], subef[i], subchg[i], submult[i], "valid" if subvalid[i] else "invalid")))
+        print(("%s formula %-12s charge %i mult %i %s" % (
+            subxyz[i], subef[i], subchg[i], submult[i], "valid" if subvalid[i] else "invalid")))
     fragid = open('fragmentid.txt', 'w')
-    for formula in subef : fragid.write(formula+" ")
+    for formula in subef: fragid.write(formula + " ")
     fragid.write("\nBondfactor: " + str(bondfactor))
     if not all(subvalid): fragid.write("\ninvalid")
     fragid.close()
     # Archive and exit
     tarexit()
+
 
 if __name__ == "__main__":
     main()

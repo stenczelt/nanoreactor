@@ -3,7 +3,7 @@
 """
 freezing-string.py
 
-Starting from an initial .xyz file with two structures (reactants and products), 
+Starting from an initial .xyz file with two structures (reactants and products),
 perform the following sequence of Q-Chem calculations:
 
 1) Optimize the endpoints
@@ -12,35 +12,44 @@ perform the following sequence of Q-Chem calculations:
 4) Intrinsic reaction coordinate
 
 Freezing string results are saved to file as stringfile.txt and Vfile.txt (Q-Chem output format.)
-IRC results are saved to file as irc.xyz (coordinates), irc.pop (charge and spin populations), 
+IRC results are saved to file as irc.xyz (coordinates), irc.pop (charge and spin populations),
 irc.nrg (arc length vs. energy) and irc_spaced.xyz (equally spaced coordinates).
 """
 
-from nanoreactor.molecule import Molecule, arc
-from nanoreactor.qchem import QChem, QChemTS, QChemIRC, SpaceIRC, tarexit
-from nanoreactor.nifty import _exec
-from collections import OrderedDict
-import os, sys, re, shutil
-import numpy as np
 import argparse
+import os
+import shutil
+import sys
+from collections import OrderedDict
+
+import numpy as np
+
+from nanoreactor.molecule import Molecule, arc
+from nanoreactor.nifty import _exec
+from nanoreactor.qchem import QChem, QChemIRC, QChemTS, SpaceIRC, tarexit
 
 tarexit.tarfnm = 'freezing-string.tar.bz2'
-tarexit.include = ['*.xyz', 'irc*', 'qc*', '*.txt', '*.log', '*.err'] 
+tarexit.include = ['*.xyz', 'irc*', 'qc*', '*.txt', '*.log', '*.err']
 Ha_to_kcalmol = 627.5096080305927
+
 
 def parse_user_input():
     # Parse user input - run at the beginning.
     parser = argparse.ArgumentParser()
-    parser.add_argument('initial', type=str, help='Two-frame coordinate file with reactant and product structures (required)')
+    parser.add_argument('initial', type=str,
+                        help='Two-frame coordinate file with reactant and product structures (required)')
     parser.add_argument('--charge', type=int, help='Net charge (required)')
     parser.add_argument('--mult', type=int, help='Spin multiplicity (required)')
-    parser.add_argument('--methods', type=str, nargs='+', default=['b3lyp'], help='Which electronic structure method to use. ' 
-                        'Provide 2 names if you want the final TS refinement + IRC to use a different method.')
-    parser.add_argument('--bases', type=str, nargs='+', default=['6-31g(d)', '6-31+g(d,p)'], help='Which basis set to use. '
-                        'Provide 2 names if you want the final TS refinement + IRC to use a different basis set.')
-    parser.add_argument('--fragpath', type=str, default=None, help='Path to fragment directory')    
+    parser.add_argument('--methods', type=str, nargs='+', default=['b3lyp'],
+                        help='Which electronic structure method to use. '
+                             'Provide 2 names if you want the final TS refinement + IRC to use a different method.')
+    parser.add_argument('--bases', type=str, nargs='+', default=['6-31g(d)', '6-31+g(d,p)'],
+                        help='Which basis set to use. '
+                             'Provide 2 names if you want the final TS refinement + IRC to use a different basis set.')
+    parser.add_argument('--fragpath', type=str, default=None, help='Path to fragment directory')
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
+
 
 def main():
     # Get user input.
@@ -55,26 +64,30 @@ def main():
     # Optimize reactant and product geometries, and write them to an input file for freezing string.
     print("Optimizing endpoints...")
     S[0].write("strrct.xyz")
-    QcRct = QChem("strrct.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0], qcin="qcopt_rct.in")
+    QcRct = QChem("strrct.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0],
+                  qcin="qcopt_rct.in")
     QcRct.opt()
     S[-1].write("strprd.xyz")
-    QcPrd = QChem("strprd.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0], qcin="qcopt_prd.in")
+    QcPrd = QChem("strprd.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0],
+                  qcin="qcopt_prd.in")
     QcPrd.opt()
     RP = QcRct.M[-1] + QcPrd.M[-1]
     RP.write("strrp.xyz")
     # Create the freezing string calculation, and calculate the transition state.
-    QCFS = QChem("strrp.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0], qcin="qcfsm.in")
-    print("Freezing string.."); QCFS.fsm()
+    QCFS = QChem("strrp.xyz", charge=args.charge, mult=args.mult, method=args.methods[0], basis=args.bases[0],
+                 qcin="qcfsm.in")
+    print("Freezing string..");
+    QCFS.fsm()
     QCFS.M.write('strts.xyz')
 
     # Perform transition state search.
     # First run the TS-calculation with the same basis set as the growing string.
-    QCTS1 = QChemTS('strts.xyz', charge=args.charge, mult=args.mult, method=args.methods[0], 
-                    basis=args.bases[0], finalize=(len(args.methods)==1), qcin='qcts1.in', vout='irc_transition.vib')
+    QCTS1 = QChemTS('strts.xyz', charge=args.charge, mult=args.mult, method=args.methods[0],
+                    basis=args.bases[0], finalize=(len(args.methods) == 1), qcin='qcts1.in', vout='irc_transition.vib')
     QCTS1.write('ts1.xyz')
     if len(args.methods) == 2:
         print(' --== \x1b[1;92mUpgrading\x1b[0m ==--')
-        QCTS2 = QChemTS("ts1.xyz", charge=args.charge, mult=args.mult, method=args.methods[1], 
+        QCTS2 = QChemTS("ts1.xyz", charge=args.charge, mult=args.mult, method=args.methods[1],
                         basis=args.bases[1], finalize=True, qcin='qcts2.in', vout='irc_transition.vib')
         QCTS2.write('ts2.xyz')
         qcdir = QCTS2.qcdir
@@ -85,13 +98,15 @@ def main():
     # Intrinsic reaction coordinate calculation.
     print("Intrinsic reaction coordinate..")
     # Process and save IRC results.
-    M_IRC, E_IRC = QChemIRC("ts.xyz", charge=args.charge, mult=args.mult, method=args.methods[-1], basis=args.bases[-1], qcdir=qcdir, xyz0=args.initial)
+    M_IRC, E_IRC = QChemIRC("ts.xyz", charge=args.charge, mult=args.mult, method=args.methods[-1], basis=args.bases[-1],
+                            qcdir=qcdir, xyz0=args.initial)
     M_IRC.write("irc.xyz")
     M_IRC.get_populations().write('irc.pop', ftype='xyz')
     # Save the IRC energy as a function of arc length.
     ArcMol = arc(M_IRC, RMSD=True)
     ArcMolCumul = np.insert(np.cumsum(ArcMol), 0, 0.0)
-    np.savetxt("irc.nrg", np.hstack((ArcMolCumul.reshape(-1, 1), E_IRC.reshape(-1,1))), fmt="% 14.6f", header="Arclength(Ang) Energy(kcal/mol)")
+    np.savetxt("irc.nrg", np.hstack((ArcMolCumul.reshape(-1, 1), E_IRC.reshape(-1, 1))), fmt="% 14.6f",
+               header="Arclength(Ang) Energy(kcal/mol)")
     # Create IRC with equally spaced structures.
     M_IRC_EV = SpaceIRC(M_IRC, E_IRC, RMSD=True)
     M_IRC_EV.write("irc_spaced.xyz")
@@ -102,11 +117,13 @@ def main():
     QCP = QChem("irc_product.xyz", charge=args.charge, mult=args.mult, method=args.methods[-1], basis=args.bases[-1])
     shutil.copy2("ts.xyz", "irc_transition.xyz")
     QCT = QChem("irc_transition.xyz", charge=args.charge, mult=args.mult, method=args.methods[-1], basis=args.bases[-1])
+
     def FinalSCF(SP):
         SP.make_stable()
         SP.jobtype = 'sp'
         SP.remextra = OrderedDict([('scf_final_print', '1')])
         SP.calculate()
+
     FinalSCF(QCR)
     FinalSCF(QCP)
     FinalSCF(QCT)
@@ -125,19 +142,19 @@ def main():
     QCT.freq()
     T = QCT.load_qcout()
     nrgfile = open('deltaG.nrg', 'w')
-    deltaH = P.qm_energies[0]*Ha_to_kcalmol + P.qm_zpe[0] - R.qm_energies[0]*Ha_to_kcalmol - R.qm_zpe[0]
-    deltaG = deltaH - P.qm_entropy[0]*0.29815 + P.qm_enthalpy[0] + R.qm_entropy[0]*0.29815 - R.qm_enthalpy[0]
-    Ha = T.qm_energies[0]*Ha_to_kcalmol + T.qm_zpe[0] - R.qm_energies[0]*Ha_to_kcalmol - R.qm_zpe[0]
-    Ga = Ha - T.qm_entropy[0]*0.29815 + T.qm_enthalpy[0] + R.qm_entropy[0]*0.29815 - R.qm_enthalpy[0]
+    deltaH = P.qm_energies[0] * Ha_to_kcalmol + P.qm_zpe[0] - R.qm_energies[0] * Ha_to_kcalmol - R.qm_zpe[0]
+    deltaG = deltaH - P.qm_entropy[0] * 0.29815 + P.qm_enthalpy[0] + R.qm_entropy[0] * 0.29815 - R.qm_enthalpy[0]
+    Ha = T.qm_energies[0] * Ha_to_kcalmol + T.qm_zpe[0] - R.qm_energies[0] * Ha_to_kcalmol - R.qm_zpe[0]
+    Ga = Ha - T.qm_entropy[0] * 0.29815 + T.qm_enthalpy[0] + R.qm_entropy[0] * 0.29815 - R.qm_enthalpy[0]
     nrgfile.write("=> ** The following data is referenced to reactant and product complexes **\n")
     nrgfile.write("=> ** WARNING! Data may not be accurate in cases with >1 molecule        **\n")
     nrgfile.write("=> ** Activation enthalpy H_a (0K) =         %.4f kcal/mol               **\n" % Ha)
     nrgfile.write("=> ** Activation Gibbs energy G_a (STP) =    %.4f kcal/mol               **\n" % Ga)
     nrgfile.write("=> ** Delta-H(0K) =                          %.4f kcal/mol               **\n" % deltaH)
     nrgfile.write("=> ** Delta-G(STP) =                         %.4f kcal/mol               **\n" % deltaG)
-    
+
     # Calculate Delta-G's based on fragment information from reactant and product
-    # Get data from fragment nrg files 
+    # Get data from fragment nrg files
     if args.fragpath == None:
         fragpath = os.path.abspath('../../../fragments')
     else:
@@ -159,7 +176,7 @@ def main():
             enth.append(float(fragnrgfile.readline().split()[3]))
             validity.append(fragnrgfile.readline().strip())
             fragnrgfile.close()
-    #Compare list of molecules to choose right energy
+    # Compare list of molecules to choose right energy
     formulasR = []
     formulasP = []
     nrgR = 0.0
@@ -186,8 +203,8 @@ def main():
             enthP = enth[i]
     # Calculate energetics
     if nrgR != 0.0:
-        Ha = T.qm_energies[0]*Ha_to_kcalmol + T.qm_zpe[0] - nrgR*Ha_to_kcalmol - zpeR
-        Ga = Ha - T.qm_entropy[0]*0.29815 + T.qm_enthalpy[0] + entrR*0.29815 - enthR
+        Ha = T.qm_energies[0] * Ha_to_kcalmol + T.qm_zpe[0] - nrgR * Ha_to_kcalmol - zpeR
+        Ga = Ha - T.qm_entropy[0] * 0.29815 + T.qm_enthalpy[0] + entrR * 0.29815 - enthR
         nrgfile.write("=> ## The following data is calculated referenced to isolated reactant and product molecules:\n")
         nrgfile.write("=> ## Activation enthalpy H_a (0K) =         %.4f kcal/mol               ##\n" % Ha)
         nrgfile.write("=> ## Activation Gibbs energy G_a (STP) =    %.4f kcal/mol               ##\n" % Ga)
@@ -195,8 +212,8 @@ def main():
         nrgfile.write("=> Reactant state could not be identified among fragment calculations\n")
         nrgfile.write("=> No energetics referenced to isolated molecules will be calculated for this pathway\n")
     if nrgR != 0.0 and nrgP != 0.0:
-        deltaH = nrgP*Ha_to_kcalmol + zpeP - nrgR*Ha_to_kcalmol - zpeR
-        deltaG = deltaH - entrP*0.29815 + enthP + entrR*0.29815 - enthR 
+        deltaH = nrgP * Ha_to_kcalmol + zpeP - nrgR * Ha_to_kcalmol - zpeR
+        deltaG = deltaH - entrP * 0.29815 + enthP + entrR * 0.29815 - enthR
         nrgfile.write("=> ## Delta-H(0K) =                          %.4f kcal/mol               **\n" % deltaH)
         nrgfile.write("=> ## Delta-G(STP) =                         %.4f kcal/mol               **\n" % deltaG)
     elif nrgP == 0.0:
@@ -205,6 +222,7 @@ def main():
     nrgfile.close()
     print("\x1b[1;92mIRC Success!\x1b[0m")
     tarexit()
+
 
 if __name__ == "__main__":
     main()

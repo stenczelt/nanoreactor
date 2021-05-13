@@ -1,15 +1,14 @@
 #!/home/leeping/local/bin/python
 
 import os
-import argparse
 
 cwd = os.getcwd()
 jobname = os.path.split(cwd)[-1]
 
-queue="cpuq"
-hrt="36:00:00"
+queue = "cpuq"
+hrt = "36:00:00"
 
-fout="""\
+fout = """\
 #!/bin/bash
 #$ -N lrn_{jobname}
 #$ -l h_rss=4G
@@ -49,5 +48,5 @@ cd $working
 learn_fork
 """
 
-with open('qlearn.sh','w') as f: print(fout.format(jobname=jobname, cwd=cwd, hrt=hrt, queue=queue), file=f)
+with open('qlearn.sh', 'w') as f: print(fout.format(jobname=jobname, cwd=cwd, hrt=hrt, queue=queue), file=f)
 os.system('qsub qlearn.sh')

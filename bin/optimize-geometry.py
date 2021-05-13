@@ -5,20 +5,17 @@ Run a Q-Chem geometry optimization.  Save frames where the energy is
 monotonically decreasing and save charges / spins to disk.
 """
 
-#from nanoreactor import contact
-from nanoreactor.qchem import QChem, tarexit
-from nanoreactor.molecule import Molecule
-from nanoreactor.nifty import _exec, click, monotonic_decreasing
-import traceback
 import argparse
-import time
-import os, sys
-import itertools
-import numpy as np
+import sys
 from collections import OrderedDict
+
+from nanoreactor.nifty import click, monotonic_decreasing
+# from nanoreactor import contact
+from nanoreactor.qchem import QChem, tarexit
 
 tarexit.tarfnm = 'optimize.tar.bz2'
 tarexit.include = ['*']
+
 
 def parse_user_input():
     # Parse user input - run at the beginning.
@@ -32,13 +29,14 @@ def parse_user_input():
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
 
+
 def QCOpt(initial, charge, mult, method, basis, cycles=100, gtol=600, dxtol=2400, etol=200, cart=False):
     """
     Run a Q-Chem geometry optimization.  Default tolerances for
     gradient, displacement and energy are higher than usual because we
     don't want significant nonbonded conformational changes in the
     pathway.
-    
+
     Parameters
     ----------
     initial : str
@@ -81,8 +79,9 @@ def QCOpt(initial, charge, mult, method, basis, cycles=100, gtol=600, dxtol=2400
     M = QC.load_qcout()
     return M
 
+
 def QCOptIC(*args, **kwargs):
-    """ 
+    """
     Try to run a Q-Chem geometry optimization; if it fails for some
     reason, then try Cartesian coordinates.
     """
@@ -96,6 +95,7 @@ def QCOptIC(*args, **kwargs):
     else:
         print(("Geometry optimization failed! (%s)" % OptOut.qcerr))
         tarexit()
+
 
 def main():
     # Get user input.
@@ -113,6 +113,7 @@ def main():
     QS.write('optimize.pop', ftype='xyz')
     # Archive and exit.
     tarexit()
+
 
 if __name__ == "__main__":
     main()

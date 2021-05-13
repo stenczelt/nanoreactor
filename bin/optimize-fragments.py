@@ -5,23 +5,16 @@ Run a Q-Chem geometry optimization.  Save frames where the energy is
 monotonically decreasing and save charges / spins to disk.
 """
 
-from nanoreactor import contact
-from nanoreactor.nanoreactor import commadash
-from nanoreactor.qchem import QChem, tarexit
-from nanoreactor.molecule import *
-from nanoreactor.nifty import _exec, click, monotonic_decreasing
-import networkx as nx
-import traceback
 import argparse
-import time
-import os, sys
-import itertools
-import numpy as np
 import tarfile
-from collections import OrderedDict
+
+from nanoreactor.molecule import *
+from nanoreactor.nifty import click, monotonic_decreasing
+from nanoreactor.qchem import QChem, tarexit
 
 tarexit.tarfnm = 'fragmentopt.tar.bz2'
 tarexit.include = ['*']
+
 
 def parse_user_input():
     # Parse user input - run at the beginning.
@@ -32,13 +25,15 @@ def parse_user_input():
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
 
-def QCOpt(initial, charge, mult, method, basis, cycles=100, gtol=600, dxtol=2400, etol=200, cart=False, qcin='optimize.in'):
+
+def QCOpt(initial, charge, mult, method, basis, cycles=100, gtol=600, dxtol=2400, etol=200, cart=False,
+          qcin='optimize.in'):
     """
     Run a Q-Chem geometry optimization.  Default tolerances for
     gradient, displacement and energy are higher than usual because we
     don't want significant nonbonded conformational changes in the
     pathway.
-    
+
     Parameters
     ----------
     initial : str
@@ -81,8 +76,9 @@ def QCOpt(initial, charge, mult, method, basis, cycles=100, gtol=600, dxtol=2400
     M = QC.load_qcout()
     return M
 
+
 def QCOptIC(*args, **kwargs):
-    """ 
+    """
     Try to run a Q-Chem geometry optimization; if it fails for some
     reason, then try Cartesian coordinates.
     """
@@ -97,12 +93,13 @@ def QCOptIC(*args, **kwargs):
         print(("Geometry optimization failed! (%s)" % OptOut.qcerr))
         tarexit()
 
+
 def main():
     # Get user input.
     args = parse_user_input()
     # Start timer.
     click()
-    
+
     subxyz = []
     subna = []
     subchg = []
@@ -112,7 +109,7 @@ def main():
     subeffinal = []
     SumFrags = []
     fragfiles = []
-    
+
     # Pick out the files in the tarfile that have the structure "example*.sub_*.xyz"
     idhome = os.path.abspath('..')
     tar = tarfile.open(os.path.join(idhome, 'fragmentid.tar.bz2'), 'r')
@@ -125,7 +122,7 @@ def main():
     # Extract these files from the tarfile
     tar.extractall(members=fragfiles)
     tar.close()
-    
+
     # Load files as molecules
     for frag in subxyz:
         M = Molecule(frag)
@@ -150,7 +147,7 @@ def main():
             M = M[monotonic_decreasing(M.qm_energies)]
         else:
             # Special case of a single atom
-            QCSP = QChem(subxyz[i], charge=subchg[i], mult=submult[i], method=args.method, 
+            QCSP = QChem(subxyz[i], charge=subchg[i], mult=submult[i], method=args.method,
                          basis=args.basis, qcin='%s.sp.in' % os.path.splitext(subxyz[i])[0])
             QCSP.make_stable()
             QCSP.jobtype = 'sp'
@@ -160,8 +157,8 @@ def main():
         M = M[-1]
         fragoptfile = os.path.splitext(subxyz[i])[0] + ".opt.xyz"
         M.write(fragoptfile)
-        QCFR = QChem(fragoptfile, charge=subchg[i], mult=submult[i], method=args.method, 
-                         basis=args.basis, qcin='%s.freq.in' % os.path.splitext(fragoptfile)[0])
+        QCFR = QChem(fragoptfile, charge=subchg[i], mult=submult[i], method=args.method,
+                     basis=args.basis, qcin='%s.freq.in' % os.path.splitext(fragoptfile)[0])
         QCFR.freq()
         M = QCFR.load_qcout()
         # Print out new molecular formulas.
@@ -170,30 +167,31 @@ def main():
         optformula = ' '.join([m.ef() for m in M.molecules])
         subeffinal.append(optformula)
         print(("%s.opt.xyz : formula %s; charge %i; mult %i; energy %f Ha;"
-               "ZPE %f kcal/mol; entropy %f cal/mol.K; enthalpy %f kcal/mol" 
-               % (os.path.splitext(subxyz[i])[0], optformula, subchg[i], submult[i], M.qm_energies[0], M.qm_zpe[0], 
+               "ZPE %f kcal/mol; entropy %f cal/mol.K; enthalpy %f kcal/mol"
+               % (os.path.splitext(subxyz[i])[0], optformula, subchg[i], submult[i], M.qm_energies[0], M.qm_zpe[0],
                   M.qm_entropy[0], M.qm_enthalpy[0])))
         FragE += M.qm_energies[0]
         FragZPE += M.qm_zpe[0]
         FragEntr += M.qm_entropy[0]
         FragEnth += M.qm_enthalpy[0]
         SumFrags.append(M[0])
-    for fragment in SumFrags : fragment.write('fragmentopt.xyz', append=True)
-    if subefstart != subeffinal: print("Fragments changed during optimization, calculation invalid") 
+    for fragment in SumFrags: fragment.write('fragmentopt.xyz', append=True)
+    if subefstart != subeffinal: print("Fragments changed during optimization, calculation invalid")
     print(("Final electronic energy (Ha) of optimized frags: % 18.10f" % FragE))
     print(("Final ZPE (kcal/mol) of optimized frags: % 18.10f" % FragZPE))
     print(("Final entropy (cal/mol.K) of optimized frags: % 18.10f" % FragEntr))
     print(("Final enthalpy (kcal/mol) of optimized frags: % 18.10f" % FragEnth))
     nrg = open('fragmentopt.nrg', 'w')
-    for subef in subeffinal : nrg.write(subef + " ")
+    for subef in subeffinal: nrg.write(subef + " ")
     nrg.write("\nTotal electronic energy: %f Ha\n" % FragE)
-    nrg.write("Total ZPE: %f kcal/mol\n" % FragZPE )
+    nrg.write("Total ZPE: %f kcal/mol\n" % FragZPE)
     nrg.write("Total entropy (STP): %f cal/mol.K\n" % FragEntr)
     nrg.write("Total enthalpy (STP): %f kcal/mol\n" % FragEnth)
     if subefstart != subeffinal: nrg.write("invalid")
     nrg.close()
     # Archive and exit.
     tarexit()
+
 
 if __name__ == "__main__":
     main()

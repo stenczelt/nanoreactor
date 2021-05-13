@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-""" 
+"""
 qcgs.py
 
 Python script for calling Q-Chem via growing string. The name of
-this script is actually hardcoded into gstring.exe. 
+this script is actually hardcoded into gstring.exe.
 
 This is not too complicated, I hope - this script, which pretends to
 be the Q-Chem executable, creates a QChem() object and then calls
@@ -18,23 +18,26 @@ iterations, or for any image that was unstable for the previous
 string iteration.
 
 Also, this script ensures that every image in the growing string calculation
-uses the Q-Chem 
+uses the Q-Chem
 """
 
-import os, sys
+import os
+import sys
+
 from nanoreactor.qchem import QChem, tarexit
+
 tarexit.tarfnm = "growing-string.tar.bz2"
 
 QC = QChem(sys.argv[1], qcout=sys.argv[2], qcdir=sys.argv[3], qcsave=True, readsave=True)
 
 # File that records how many calculations were done
 # for this image.
-calcfnm = os.path.splitext(sys.argv[1])[0]+".num"
+calcfnm = os.path.splitext(sys.argv[1])[0] + ".num"
 calcnum = -1
 if os.path.exists(calcfnm):
     calcnum = int(open(calcfnm).readlines()[0].strip())
 calcnum += 1
-with open(calcfnm,'w') as f: print(calcnum, file=f)
+with open(calcfnm, 'w') as f: print(calcnum, file=f)
 
 # File that records how many iterations ago we had to do a stability
 # analysis.  "# of days since last accident" kind of thang.
@@ -45,7 +48,7 @@ stablast = int(open(stabfnm).readlines()[0].strip()) if os.path.exists(stabfnm) 
 # needed stability corrections in the previous 30 iterations.
 QC.nstab = 1
 if os.path.exists('Do_Stability_Analysis'):
-    if calcnum%10 == 0 or stablast < 30:
+    if calcnum % 10 == 0 or stablast < 30:
         QC.make_stable()
 QC.force()
 
@@ -54,4 +57,4 @@ with open(stabfnm, 'w') as f:
     if QC.nstab > 1:
         print(0, file=f)
     else:
-        print(stablast+1, file=f)
+        print(stablast + 1, file=f)

@@ -13,17 +13,20 @@ TS vibrational frequencies and modes are saved to irc-transition.vib (vibrationa
 TS bond order matrix is saved to irc-transition.bnd .
 """
 
-from nanoreactor.molecule import Molecule
-from nanoreactor.qchem import QChem, tarexit
-from nanoreactor.nifty import _exec
-from collections import OrderedDict
-import os, sys, re, shutil
-import numpy as np
 import argparse
+import shutil
+import sys
+from collections import OrderedDict
+
+import numpy as np
+
+from nanoreactor.nifty import _exec
+from nanoreactor.qchem import QChem, tarexit
 
 tarexit.tarfnm = 'ts-analyze.tar.bz2'
 tarexit.include = ['*.xyz', 'irc*', 'qc*', '*.log', '*.err']
 tarexit.save = ['*.bnd', '*.vib', '*.log']
+
 
 def parse_user_input():
     # Parse user input - run at the beginning.
@@ -35,6 +38,7 @@ def parse_user_input():
     parser.add_argument('--basis', type=str, help='Basis set (required)')
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
+
 
 def main():
     # Get user input.
@@ -56,6 +60,7 @@ def main():
     QCT.calculate()
     QCT.write_vdata('irc_transition.vib')
     tarexit()
+
 
 if __name__ == "__main__":
     main()

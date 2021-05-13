@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
-from nanoreactor.molecule import Molecule, arc
-from nanoreactor.qchem import erroks, SpaceIRC
-from nanoreactor.nifty import monotonic_decreasing, extract_tar, bak
+import os
+import shutil
 from copy import deepcopy
-import os, sys, shutil, re
+
 import numpy as np
-from collections import OrderedDict
+
+from nanoreactor.molecule import Molecule, arc
+from nanoreactor.nifty import bak, extract_tar, monotonic_decreasing
+from nanoreactor.qchem import SpaceIRC, erroks
 
 """
 Recover from errors in IRC processing.  This is a temporary fix until
@@ -36,7 +38,7 @@ while True:
     qcout = qcouts[-1]
     jobtype = qcout.split('.')[-2]
     # Load the Molecule object
-    M_ = Molecule(qcout, errok = erroks[jobtype] + ['SCF failed to converge', 'Maximum optimization cycles reached'])
+    M_ = Molecule(qcout, errok=erroks[jobtype] + ['SCF failed to converge', 'Maximum optimization cycles reached'])
     # Delete extraneous keys that aren't the same
     del M_.Data['qctemplate']
     del M_.Data['qcrems']
@@ -48,7 +50,7 @@ while True:
     rmsd = M_.ref_rmsd(0)
     if np.min(rmsd[1:]) < 1e-10:
         print((qcout, "returned to the beginning"))
-        fret = np.argmin(rmsd[1:])+1
+        fret = np.argmin(rmsd[1:]) + 1
         # # We shouldn't trust the second segment.
         if M != None:
             M_ = M_[:fret]
@@ -68,13 +70,14 @@ while True:
         began = True
     else:
         # print qcout, "did not return to the beginning"
-        if M == None: M = deepcopy(M_)
+        if M == None:
+            M = deepcopy(M_)
         else:
             shift = 0
             while True:
-                JoinFwd = M[-1-shift] + M_
+                JoinFwd = M[-1 - shift] + M_
                 RmsdFwd = JoinFwd.ref_rmsd(0)
-                JoinBak = M[0+shift] + M_
+                JoinBak = M[0 + shift] + M_
                 RmsdBak = JoinBak.ref_rmsd(0)
                 print((shift, RmsdFwd[1], RmsdBak[1]))
                 if RmsdFwd[1] < 1e-4:
@@ -95,6 +98,7 @@ while True:
                     raise RuntimeError('No idea what to do with %s' % qcout)
     icalc += 1
 
+
 def GetRMSD(m0, m1):
     m = Molecule()
     m.elem = m0.elem
@@ -102,12 +106,13 @@ def GetRMSD(m0, m1):
     m.xyzs += m1.xyzs
     return m.ref_rmsd(0)[-1]
 
+
 S = Molecule('irc.xyz', ftype='xyz')
 RMSD1 = GetRMSD(S[0], M[0]) + GetRMSD(S[-1], M[-1])
 RMSD2 = GetRMSD(S[0], M[-1]) + GetRMSD(S[-1], M[0])
 print(("IRC RMSD to initial path endpoints (fwd, bkwd) = %6.3f %6.3f" % (RMSD1, RMSD2)))
 fwd = (RMSD1 < RMSD2)
-if not fwd: 
+if not fwd:
     M = M[::-1]
     iTS = len(M) - iTS
 
@@ -121,14 +126,16 @@ M.comms = ["Intrinsic Reaction Coordinate: Energy = % .4f kcal/mol" % i for i in
 M.comms[iTS] += " (Transition State)"
 
 # Eliminate geometry optimization frames that go up in energy.
-selct = np.concatenate((monotonic_decreasing(E, iTS, 0, verbose=True)[::-1], monotonic_decreasing(E, iTS, len(M), verbose=True)[1:]))
+selct = np.concatenate(
+    (monotonic_decreasing(E, iTS, 0, verbose=True)[::-1], monotonic_decreasing(E, iTS, len(M), verbose=True)[1:]))
 M = M[selct]
 E = E[selct]
 
 # Save the IRC energy as a function of arc length.
 ArcMol = arc(M, RMSD=True)
 ArcMolCumul = np.insert(np.cumsum(ArcMol), 0, 0.0)
-np.savetxt("irc.nrg", np.hstack((ArcMolCumul.reshape(-1, 1), E.reshape(-1,1))), fmt="% 14.6f", header="Arclength(Ang) Energy(kcal/mol)")
+np.savetxt("irc.nrg", np.hstack((ArcMolCumul.reshape(-1, 1), E.reshape(-1, 1))), fmt="% 14.6f",
+           header="Arclength(Ang) Energy(kcal/mol)")
 
 MOld = Molecule("irc.xyz")
 ArcOld = arc(MOld, RMSD=True)
@@ -138,7 +145,7 @@ if len(M) > len(MOld):
 else:
     print(("Repair was unnecessary (RMSDMax: %.3f -> %.3f)" % (np.max(ArcOld), np.max(ArcMol))))
     replace = False
-    
+
 M.align_center()
 M.write("irc.xyz")
 M.get_populations().write('irc.pop', ftype='xyz')
@@ -150,12 +157,11 @@ if replace: os.system('tar cjf %s * --remove-files' % fnm)
 
 os.chdir('..')
 
-if replace: 
+if replace:
     print("Replacing results with fixed version.")
     bak(fnm)
-    shutil.move('fix-TS/'+fnm, fnm)
+    shutil.move('fix-TS/' + fnm, fnm)
     extract_tar(fnm, ['irc.nrg', 'irc.pop', 'irc.xyz', 'irc_spaced.xyz'], force=True)
     os.system('draw-reaction.py')
-    
-shutil.rmtree('fix-TS')
 
+shutil.rmtree('fix-TS')

@@ -15,14 +15,10 @@ Named after the mighty Sniffy Handy Nifty (King Sniffy)
 @date 2018-03-10
 """
 
-
-
-
+import distutils.dir_util
 import filecmp
 import itertools
-import distutils.dir_util
 import os
-import re
 import shutil
 import sys
 from select import select
@@ -41,19 +37,22 @@ import tarfile
 import time
 import subprocess
 import math
-import six # For six.string_types
+import six  # For six.string_types
 from subprocess import PIPE
 from collections import OrderedDict, defaultdict
 
-#================================#
+# ================================#
 #       Set up the logger        #
-#================================#
+# ================================#
 if "forcebalance" in __name__:
     # If this module is part of ForceBalance, use the package level logger
     from .output import *
-    package="ForceBalance"
+
+    package = "ForceBalance"
 else:
     from logging import *
+
+
     # Define two handlers that don't print newline characters at the end of each line
     class RawStreamHandler(StreamHandler):
         """
@@ -61,7 +60,8 @@ else:
         This is done in order to ensure functions in molecule.py and nifty.py work consistently
         across multiple packages.
         """
-        def __init__(self, stream = sys.stdout):
+
+        def __init__(self, stream=sys.stdout):
             super(RawStreamHandler, self).__init__(stream)
 
         def emit(self, record):
@@ -69,12 +69,14 @@ else:
             self.stream.write(message)
             self.flush()
 
+
     class RawFileHandler(FileHandler):
         """
         Exactly like FileHandler, except no newline character is printed at the end of each message.
         This is done in order to ensure functions in molecule.py and nifty.py work consistently
         across multiple packages.
         """
+
         def __init__(self, *args, **kwargs):
             super(RawFileHandler, self).__init__(*args, **kwargs)
 
@@ -85,11 +87,12 @@ else:
             self.stream.write(message)
             self.flush()
 
+
     if "geometric" in __name__:
         # This ensures logging behavior is consistent with the rest of geomeTRIC
         logger = getLogger(__name__)
         logger.setLevel(INFO)
-        package="geomeTRIC"
+        package = "geomeTRIC"
     else:
         logger = getLogger("NiftyLogger")
         logger.setLevel(INFO)
@@ -102,6 +105,7 @@ else:
 
 try:
     import bz2
+
     HaveBZ2 = True
 except ImportError:
     logger.warning("bz2 module import failed (used in compressing or decompressing pickle files)\n")
@@ -109,6 +113,7 @@ except ImportError:
 
 try:
     import gzip
+
     HaveGZ = True
 except ImportError:
     logger.warning("gzip module import failed (used in compressing or decompressing pickle files)\n")
@@ -129,39 +134,38 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 # calorie-joule relationship   4.184 J (exact; from NIST)
 
 ## Boltzmann constant in kJ mol^-1 k^-1
-kb          = 0.008314462618       # Previous value: 0.0083144100163
-kb_si       = 1.380649e-23
+kb = 0.008314462618  # Previous value: 0.0083144100163
+kb_si = 1.380649e-23
 
 # Conversion factors
-bohr2ang     = 0.529177210903      # Previous value: 0.529177210
-ang2bohr     = 1.0 / bohr2ang
-au2kcal      = 627.5094740630558   # Previous value: 627.5096080306
-kcal2au      = 1.0 / au2kcal
-au2kj        = 2625.4996394798254  # Previous value: 2625.5002
-kj2au        = 1.0 / au2kj
-grad_au2gmx  = 49614.75258920567   # Previous value: 49614.75960959161
-grad_gmx2au  = 1.0 / grad_au2gmx
-au2evang     = 51.422067476325886  # Previous value: 51.42209166566339
-evang2au     = 1.0 / au2evang
+bohr2ang = 0.529177210903  # Previous value: 0.529177210
+ang2bohr = 1.0 / bohr2ang
+au2kcal = 627.5094740630558  # Previous value: 627.5096080306
+kcal2au = 1.0 / au2kcal
+au2kj = 2625.4996394798254  # Previous value: 2625.5002
+kj2au = 1.0 / au2kj
+grad_au2gmx = 49614.75258920567  # Previous value: 49614.75960959161
+grad_gmx2au = 1.0 / grad_au2gmx
+au2evang = 51.422067476325886  # Previous value: 51.42209166566339
+evang2au = 1.0 / au2evang
 c_lightspeed = 299792458.
-hbar         = 1.054571817e-34
-avogadro     = 6.02214076e23
-au_mass      = 9.1093837015e-31    # Atomic unit of mass in kg
-amu_mass     = 1.66053906660e-27   # Atomic mass unit in kg
-amu2au       = amu_mass / au_mass
-cm2au        = 100 * c_lightspeed * (2*np.pi*hbar) * avogadro / 1000 / au2kj # Multiply to convert cm^-1 to Hartree
-ambervel2au  = 9.349961132249932e-04 # Multiply to go from AMBER velocity unit Ang/(1/20.455 ps) to bohr/atu.
-
+hbar = 1.054571817e-34
+avogadro = 6.02214076e23
+au_mass = 9.1093837015e-31  # Atomic unit of mass in kg
+amu_mass = 1.66053906660e-27  # Atomic mass unit in kg
+amu2au = amu_mass / au_mass
+cm2au = 100 * c_lightspeed * (2 * np.pi * hbar) * avogadro / 1000 / au2kj  # Multiply to convert cm^-1 to Hartree
+ambervel2au = 9.349961132249932e-04  # Multiply to go from AMBER velocity unit Ang/(1/20.455 ps) to bohr/atu.
 
 ## Q-Chem to GMX unit conversion for energy
-eqcgmx = au2kj                     # Previous value: 2625.5002
+eqcgmx = au2kj  # Previous value: 2625.5002
 ## Q-Chem to GMX unit conversion for force
-fqcgmx = -grad_au2gmx              # Previous value: -49621.9
+fqcgmx = -grad_au2gmx  # Previous value: -49621.9
 
 
-#=========================#
+# =========================#
 #     I/O formatting      #
-#=========================#
+# =========================#
 # These functions may be useful someday but I have not tested them
 # def bzip2(src):
 #     dest = src+'.bz2'
@@ -199,9 +203,11 @@ def pvec1d(vec1d, precision=1, format="e", loglevel=INFO):
         logger.log(loglevel, "%% .%i%s " % (precision, format) % v2a[i])
     logger.log(loglevel, '\n')
 
+
 def astr(vec1d, precision=4):
     """ Write an array to a string so we can use it to key a dictionary. """
     return ' '.join([("%% .%ie " % precision % i) for i in vec1d])
+
 
 def pmat2d(mat2d, precision=1, format="e", loglevel=INFO):
     """Printout of a 2-D array.
@@ -214,6 +220,7 @@ def pmat2d(mat2d, precision=1, format="e", loglevel=INFO):
             logger.log(loglevel, "%% .%i%s " % (precision, format) % m2a[i][j])
         logger.log(loglevel, '\n')
 
+
 def grouper(iterable, n):
     """Collect data into fixed-length chunks or blocks"""
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
@@ -221,14 +228,17 @@ def grouper(iterable, n):
     lzip = [[j for j in i if j is not None] for i in list(zip_longest(*args))]
     return lzip
 
+
 def encode(l):
-    return [[len(list(group)),name] for name, group in itertools.groupby(l)]
+    return [[len(list(group)), name] for name, group in itertools.groupby(l)]
+
 
 def segments(e):
     # Takes encoded input.
-    begins = np.array([sum([k[0] for k in e][:j]) for j,i in enumerate(e) if i[1] == 1])
+    begins = np.array([sum([k[0] for k in e][:j]) for j, i in enumerate(e) if i[1] == 1])
     lens = np.array([i[0] for i in e if i[1] == 1])
-    return [(i, i+j) for i, j in zip(begins, lens)]
+    return [(i, i + j) for i, j in zip(begins, lens)]
+
 
 def commadash(l):
     # Formats a list like [27, 28, 29, 30, 31, 88, 89, 90, 91, 100, 136, 137, 138, 139]
@@ -236,9 +246,11 @@ def commadash(l):
     L = sorted(l)
     if len(L) == 0:
         return "(empty)"
-    L.append(L[-1]+1)
+    L.append(L[-1] + 1)
     LL = [i in L for i in range(L[-1])]
-    return ','.join('%i-%i' % (i[0]+1,i[1]) if (i[1]-1 > i[0]) else '%i' % (i[0]+1) for i in segments(encode(LL)))
+    return ','.join(
+        '%i-%i' % (i[0] + 1, i[1]) if (i[1] - 1 > i[0]) else '%i' % (i[0] + 1) for i in segments(encode(LL)))
+
 
 def uncommadash(s):
     # Takes a string like '27-31,88-91,100,136-139'
@@ -247,7 +259,7 @@ def uncommadash(s):
     try:
         for w in s.split(','):
             ws = w.split('-')
-            a = int(ws[0])-1
+            a = int(ws[0]) - 1
             if len(ws) == 1:
                 b = int(ws[0])
             elif len(ws) == 2:
@@ -261,7 +273,7 @@ def uncommadash(s):
                 else:
                     logger.warning("Second number cannot be smaller than first: %d %d\n" % (a, b))
                 raise
-            newL = list(range(a,b))
+            newL = list(range(a, b))
             if any([i in L for i in newL]):
                 logger.warning("Duplicate entries found in list\n")
                 raise
@@ -274,16 +286,18 @@ def uncommadash(s):
         raise RuntimeError
     return L
 
+
 def natural_sort(l):
     """ Return a natural sorted list. """
     # Convert a character to a digit or a lowercase character
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     # Split string into "integer" and "noninteger" fields and convert each one
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     # Sort strings using these keys in descending order of importance, I guess.
-    return sorted(l, key = alphanum_key)
+    return sorted(l, key=alphanum_key)
 
-def printcool(text,sym="#",bold=False,color=2,ansi=None,bottom='-',minwidth=50,center=True,sym2="="):
+
+def printcool(text, sym="#", bold=False, color=2, ansi=None, bottom='-', minwidth=50, center=True, sym2="="):
     """Cool-looking printout for slick formatting of output.
 
     @param[in] text The string that the printout is based upon.  This function
@@ -311,32 +325,38 @@ def printcool(text,sym="#",bold=False,color=2,ansi=None,bottom='-',minwidth=50,c
 
     @return bar The bottom bar is returned for the user to print later, e.g. to mark off a 'section'
     """
+
     def newlen(l):
-        return len(re.sub(r"\x1b\[[0-9;]*m","",l))
+        return len(re.sub(r"\x1b\[[0-9;]*m", "", l))
+
     text = text.split('\n')
-    width = max(minwidth,max([newlen(line) for line in text]))
+    width = max(minwidth, max([newlen(line) for line in text]))
     bar = ''.join([sym2 for i in range(width + 6)])
     bar = sym + bar + sym
-    #bar = ''.join([sym for i in range(width + 8)])
-    logger.info('\r'+bar + '\n')
+    # bar = ''.join([sym for i in range(width + 8)])
+    logger.info('\r' + bar + '\n')
     for ln, line in enumerate(text):
-        if type(center) is list: c1 = center[ln]
-        else: c1 = center
+        if type(center) is list:
+            c1 = center[ln]
+        else:
+            c1 = center
         if c1:
-            padleft = ' ' * (int((width - newlen(line))/2))
+            padleft = ' ' * (int((width - newlen(line)) / 2))
         else:
             padleft = ''
-        padright = ' '* (width - newlen(line) - len(padleft))
+        padright = ' ' * (width - newlen(line) - len(padleft))
         if ansi is not None:
             ansi = str(ansi)
-            logger.info("%s| \x1b[%sm%s " % (sym, ansi, padleft)+line+" %s\x1b[0m |%s\n" % (padright, sym))
+            logger.info("%s| \x1b[%sm%s " % (sym, ansi, padleft) + line + " %s\x1b[0m |%s\n" % (padright, sym))
         elif color is not None:
             if color == 0 and bold:
                 logger.info("%s| \x1b[1m%s " % (sym, padleft) + line + " %s\x1b[0m |%s\n" % (padright, sym))
             elif color == 0:
-                logger.info("%s| %s " % (sym, padleft)+line+" %s |%s\n" % (padright, sym))
+                logger.info("%s| %s " % (sym, padleft) + line + " %s |%s\n" % (padright, sym))
             else:
-                logger.info("%s| \x1b[%s9%im%s " % (sym, bold and "1;" or "", color, padleft)+line+" %s\x1b[0m |%s\n" % (padright, sym))
+                logger.info(
+                    "%s| \x1b[%s9%im%s " % (sym, bold and "1;" or "", color, padleft) + line + " %s\x1b[0m |%s\n" % (
+                        padright, sym))
             # if color == 3 or color == 7:
             #     print "%s\x1b[40m\x1b[%s9%im%s" % (''.join([sym for i in range(3)]), bold and "1;" or "", color, padleft),line,"%s\x1b[0m%s" % (padright, ''.join([sym for i in range(3)]))
             # else:
@@ -347,7 +367,9 @@ def printcool(text,sym="#",bold=False,color=2,ansi=None,bottom='-',minwidth=50,c
     botbar = ''.join([bottom for i in range(width + 8)])
     return botbar + '\n'
 
-def printcool_dictionary(Dict,title="Dictionary Keys : Values",bold=False,color=2,keywidth=25,topwidth=50,center=True,leftpad=0):
+
+def printcool_dictionary(Dict, title="Dictionary Keys : Values", bold=False, color=2, keywidth=25, topwidth=50,
+                         center=True, leftpad=0):
     """See documentation for printcool; this is a nice way to print out keys/values in a dictionary.
 
     The keys in the dictionary are sorted before printing out.
@@ -356,21 +378,27 @@ def printcool_dictionary(Dict,title="Dictionary Keys : Values",bold=False,color=
     @param[in] title The title of the printout
     """
     if Dict is None: return
-    bar = printcool(title,bold=bold,color=color,minwidth=topwidth,center=center)
+    bar = printcool(title, bold=bold, color=color, minwidth=topwidth, center=center)
+
     def magic_string(str):
         # This cryptic command returns a string with the number of characters specified as a variable. :P
         # Useful for printing nice-looking dictionaries, i guess.
         # print "\'%%-%is\' %% '%s'" % (keywidth,str.replace("'","\\'").replace('"','\\"'))
-        return eval("\'%%-%is\' %% '%s'" % (keywidth,str.replace("'","\\'").replace('"','\\"')))
+        return eval("\'%%-%is\' %% '%s'" % (keywidth, str.replace("'", "\\'").replace('"', '\\"')))
+
     if isinstance(Dict, OrderedDict):
-        logger.info('\n'.join([' '*leftpad + "%s %s " % (magic_string(str(key)),str(Dict[key])) for key in Dict if Dict[key] is not None]))
+        logger.info('\n'.join([' ' * leftpad + "%s %s " % (magic_string(str(key)), str(Dict[key])) for key in Dict if
+                               Dict[key] is not None]))
     else:
-        logger.info('\n'.join([' '*leftpad + "%s %s " % (magic_string(str(key)),str(Dict[key])) for key in sorted([i for i in Dict]) if Dict[key] is not None]))
+        logger.info('\n'.join(
+            [' ' * leftpad + "%s %s " % (magic_string(str(key)), str(Dict[key])) for key in sorted([i for i in Dict]) if
+             Dict[key] is not None]))
     logger.info("\n%s" % bar)
 
-#===============================#
-#| Math: Variable manipulation |#
-#===============================#
+
+# ===============================#
+# | Math: Variable manipulation |#
+# ===============================#
 def isint(word):
     """ONLY matches integers! If you have a decimal point? None shall pass!
 
@@ -384,6 +412,7 @@ def isint(word):
         return False
     return re.match('^[-+]?[0-9]+$', word)
 
+
 def isfloat(word):
     """Matches ANY number; it can be a decimal, scientific notation, what have you
     CAUTION - this will also match an integer.
@@ -392,10 +421,13 @@ def isfloat(word):
     @return answer Boolean which specifies whether the string is any number
 
     """
-    try: word = str(word)
-    except: return False
+    try:
+        word = str(word)
+    except:
+        return False
     if len(word) == 0: return False
-    return re.match(r'^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$',word)
+    return re.match(r'^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$', word)
+
 
 def isdecimal(word):
     """Matches things with a decimal only; see isint and isfloat.
@@ -404,9 +436,12 @@ def isdecimal(word):
     @return answer Boolean which specifies whether the string is a number with a decimal point
 
     """
-    try: word = str(word)
-    except: return False
+    try:
+        word = str(word)
+    except:
+        return False
     return isfloat(word) and not isint(word)
+
 
 def floatornan(word):
     """Returns a big number if we encounter NaN.
@@ -422,6 +457,7 @@ def floatornan(word):
         logger.info("Setting %s to % .1e\n" % big)
         return big
 
+
 def col(vec):
     """
     Given any list, array, or matrix, return a 1-column 2D array.
@@ -434,6 +470,7 @@ def col(vec):
     """
     return np.array(vec).reshape(-1, 1)
 
+
 def row(vec):
     """Given any list, array, or matrix, return a 1-row 2D array.
 
@@ -443,6 +480,7 @@ def row(vec):
     """
     return np.array(vec).reshape(1, -1)
 
+
 def flat(vec):
     """Given any list, array, or matrix, return a single-index array.
 
@@ -450,6 +488,7 @@ def flat(vec):
     @return answer The flattened data
     """
     return np.array(vec).reshape(-1)
+
 
 def est124(val):
     """Given any positive floating point value, return a value [124]e+xx
@@ -462,15 +501,16 @@ def est124(val):
     log2 = 0.3010299956639812
     log4 = 0.6020599913279624
     log10 = 1.0
-    if logfrac < 0.5*(log1+log2):
+    if logfrac < 0.5 * (log1 + log2):
         fac = 1.0
-    elif logfrac < 0.5*(log2+log4):
+    elif logfrac < 0.5 * (log2 + log4):
         fac = 2.0
-    elif logfrac < 0.5*(log4+log10):
+    elif logfrac < 0.5 * (log4 + log10):
         fac = 4.0
     else:
         fac = 10.0
-    return fac*10**logint
+    return fac * 10 ** logint
+
 
 def est1234568(val):
     """Given any positive floating point value, return a value [1234568]e+xx
@@ -488,44 +528,46 @@ def est1234568(val):
     log6 = np.log10(6)
     log8 = np.log10(8)
     log10 = 1.0
-    if logfrac < 0.5*(log1+log2):
+    if logfrac < 0.5 * (log1 + log2):
         fac = 1.0
-    elif logfrac < 0.5*(log2+log3):
+    elif logfrac < 0.5 * (log2 + log3):
         fac = 2.0
-    elif logfrac < 0.5*(log3+log4):
+    elif logfrac < 0.5 * (log3 + log4):
         fac = 3.0
-    elif logfrac < 0.5*(log4+log5):
+    elif logfrac < 0.5 * (log4 + log5):
         fac = 4.0
-    elif logfrac < 0.5*(log5+log6):
+    elif logfrac < 0.5 * (log5 + log6):
         fac = 5.0
-    elif logfrac < 0.5*(log6+log8):
+    elif logfrac < 0.5 * (log6 + log8):
         fac = 6.0
-    elif logfrac < 0.5*(log8+log10):
+    elif logfrac < 0.5 * (log8 + log10):
         fac = 8.0
     else:
         fac = 10.0
-    return fac*10**logint
+    return fac * 10 ** logint
+
 
 def monotonic(arr, start, end):
     # Make sure an array is monotonically decreasing from the start to the end.
     a0 = arr[start]
     i0 = start
     if end > start:
-        i = start+1
+        i = start + 1
         while i < end:
             if arr[i] < a0:
-                arr[i0:i+1] = np.linspace(a0, arr[i], i-i0+1)
+                arr[i0:i + 1] = np.linspace(a0, arr[i], i - i0 + 1)
                 a0 = arr[i]
                 i0 = i
             i += 1
     if end < start:
-        i = start-1
+        i = start - 1
         while i >= end:
             if arr[i] < a0:
-                arr[i:i0+1] = np.linspace(arr[i], a0, i0-i+1)
+                arr[i:i0 + 1] = np.linspace(arr[i], a0, i0 - i + 1)
                 a0 = arr[i]
                 i0 = i
             i -= 1
+
 
 def monotonic_decreasing(arr, start=None, end=None, verbose=False):
     """
@@ -554,7 +596,7 @@ def monotonic_decreasing(arr, start=None, end=None, verbose=False):
     idx = [start]
     if verbose: logger.info("Starting @ %i : %.6f\n" % (start, arr[start]))
     if end > start:
-        i = start+1
+        i = start + 1
         while i < end:
             if arr[i] < a0:
                 a0 = arr[i]
@@ -564,7 +606,7 @@ def monotonic_decreasing(arr, start=None, end=None, verbose=False):
                 if verbose: logger.info("Excluding  %i : %.6f\n" % (i, arr[i]))
             i += 1
     if end < start:
-        i = start-1
+        i = start - 1
         while i >= end:
             if arr[i] < a0:
                 a0 = arr[i]
@@ -575,9 +617,10 @@ def monotonic_decreasing(arr, start=None, end=None, verbose=False):
             i -= 1
     return np.array(idx)
 
-#====================================#
-#| Math: Vectors and linear algebra |#
-#====================================#
+
+# ====================================#
+# | Math: Vectors and linear algebra |#
+# ====================================#
 def orthogonalize(vec1, vec2):
     """Given two vectors vec1 and vec2, project out the component of vec1
     that is along the vec2-direction.
@@ -586,11 +629,11 @@ def orthogonalize(vec1, vec2):
     @param[in] vec2 The projector (component subtracted out from vec1 is parallel to this)
     @return answer A copy of vec1 but with the vec2-component projected out.
     """
-    v2u = vec2/np.linalg.norm(vec2)
-    return vec1 - v2u*np.dot(vec1, v2u)
+    v2u = vec2 / np.linalg.norm(vec2)
+    return vec1 - v2u * np.dot(vec1, v2u)
 
-def invert_svd(X,thresh=1e-12):
 
+def invert_svd(X, thresh=1e-12):
     """
 
     Invert a matrix using singular value decomposition.
@@ -600,23 +643,24 @@ def invert_svd(X,thresh=1e-12):
 
     """
 
-    u,s,vh = np.linalg.svd(X, full_matrices=0)
-    uh     = np.transpose(u)
-    v      = np.transpose(vh)
-    si     = s.copy()
+    u, s, vh = np.linalg.svd(X, full_matrices=0)
+    uh = np.transpose(u)
+    v = np.transpose(vh)
+    si = s.copy()
     for i in range(s.shape[0]):
         if abs(s[i]) > thresh:
-            si[i] = 1./s[i]
+            si[i] = 1. / s[i]
         else:
             si[i] = 0.0
-    si     = np.diag(si)
-    Xt     = multi_dot([v, si, uh])
+    si = np.diag(si)
+    Xt = multi_dot([v, si, uh])
     return Xt
 
-#==============================#
-#|    Linear least squares    |#
-#==============================#
-def get_least_squares(x, y, w = None, thresh=1e-12):
+
+# ==============================#
+# |    Linear least squares    |#
+# ==============================#
+def get_least_squares(x, y, w=None, thresh=1e-12):
     """
     @code
      __                  __
@@ -641,7 +685,7 @@ def get_least_squares(x, y, w = None, thresh=1e-12):
     # X is a 'tall' matrix.
     X = np.array(x)
     if len(X.shape) == 1:
-        X = X[:,np.newaxis]
+        X = X[:, np.newaxis]
     Y = col(y)
     n_x = X.shape[0]
     n_fit = X.shape[1]
@@ -650,9 +694,10 @@ def get_least_squares(x, y, w = None, thresh=1e-12):
     # Build the weight matrix.
     if w is not None:
         if len(w) != n_x:
-            warn_press_key("The weight array length (%i) must be the same as the number of 'X' data points (%i)!" % len(w), n_x)
+            warn_press_key(
+                "The weight array length (%i) must be the same as the number of 'X' data points (%i)!" % len(w), n_x)
         w /= np.mean(w)
-        WH = np.diag(w**0.5)
+        WH = np.diag(w ** 0.5)
     else:
         WH = np.eye(n_x)
     # Make the Moore-Penrose Pseudoinverse.
@@ -668,11 +713,11 @@ def get_least_squares(x, y, w = None, thresh=1e-12):
     # We could get these all from MPPI, but I might get confused later on, so might as well do it here :P
     return np.array(Beta).flatten(), np.array(Hat), np.array(yfit).flatten(), np.array(MPPI)
 
-#===========================================#
-#| John's statisticalInefficiency function |#
-#===========================================#
-def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
 
+# ===========================================#
+# | John's statisticalInefficiency function |#
+# ===========================================#
+def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
     """
     Compute the (cross) statistical inefficiency of (two) timeseries.
 
@@ -737,7 +782,7 @@ def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
     dA_n = A_n.astype(np.float64) - mu_A
     dB_n = B_n.astype(np.float64) - mu_B
     # Compute estimator of covariance of (A,B) using estimator that will ensure C(0) = 1.
-    sigma2_AB = (dA_n * dB_n).mean() # standard estimator to ensure C(0) = 1
+    sigma2_AB = (dA_n * dB_n).mean()  # standard estimator to ensure C(0) = 1
     # Trap the case where this covariance is zero, and we cannot proceed.
     if sigma2_AB == 0:
         if warn:
@@ -749,15 +794,15 @@ def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
     # is dominated by noise and indistinguishable from zero.
     t = 1
     increment = 1
-    while t < N-1:
+    while t < N - 1:
         # compute normalized fluctuation correlation function at time t
-        C = sum( dA_n[0:(N-t)]*dB_n[t:N] + dB_n[0:(N-t)]*dA_n[t:N] ) / (2.0 * float(N-t) * sigma2_AB)
+        C = sum(dA_n[0:(N - t)] * dB_n[t:N] + dB_n[0:(N - t)] * dA_n[t:N]) / (2.0 * float(N - t) * sigma2_AB)
         # Terminate if the correlation function has crossed zero and we've computed the correlation
         # function at least out to 'mintime'.
         if (C <= 0.0) and (t > mintime):
             break
         # Accumulate contribution to the statistical inefficiency.
-        g += 2.0 * C * (1.0 - float(t)/float(N)) * float(increment)
+        g += 2.0 * C * (1.0 - float(t) / float(N)) * float(increment)
         # Increment t and the amount by which we increment t.
         t += increment
         # Increase the interval if "fast mode" is on.
@@ -767,10 +812,12 @@ def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
     # Return the computed statistical inefficiency.
     return g
 
+
 def mean_stderr(ts):
     """Return mean and standard deviation of a time series ts."""
     return np.mean(ts), \
-      np.std(ts)*np.sqrt(statisticalInefficiency(ts, warn=False)/len(ts))
+           np.std(ts) * np.sqrt(statisticalInefficiency(ts, warn=False) / len(ts))
+
 
 # Slices a 2D array of data by column.  The new array is fed into the statisticalInefficiency function.
 def multiD_statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
@@ -779,14 +826,15 @@ def multiD_statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=Tr
     multiD_sI = np.zeros((n_row, n_col))
     for col in range(n_col):
         if B_n is None:
-            multiD_sI[:,col] = statisticalInefficiency(A_n[:,col], B_n, fast, mintime, warn)
+            multiD_sI[:, col] = statisticalInefficiency(A_n[:, col], B_n, fast, mintime, warn)
         else:
-            multiD_sI[:,col] = statisticalInefficiency(A_n[:,col], B_n[:,col], fast, mintime, warn)
+            multiD_sI[:, col] = statisticalInefficiency(A_n[:, col], B_n[:, col], fast, mintime, warn)
     return multiD_sI
 
-#========================================#
-#|      Loading compressed pickles      |#
-#========================================#
+
+# ========================================#
+# |      Loading compressed pickles      |#
+# ========================================#
 
 def lp_dump(obj, fnm, protocol=0):
     """ Write an object to a zipped pickle file specified by the path. """
@@ -805,6 +853,7 @@ def lp_dump(obj, fnm, protocol=0):
         f = open(fnm, 'wb')
     Pickler(f, protocol).dump(obj)
     f.close()
+
 
 def lp_load(fnm):
     """ Read an object from a bzipped file specified by the path. """
@@ -860,14 +909,15 @@ def lp_load(fnm):
         answer = load_uncompress()
     return answer
 
-#==============================#
-#|      Work Queue stuff      |#
-#==============================#
+
+# ==============================#
+# |      Work Queue stuff      |#
+# ==============================#
 try:
     import work_queue
 except:
     pass
-    #logger.warning("Work Queue library import fail (You can't queue up jobs using Work Queue)\n")
+    # logger.warning("Work Queue library import fail (You can't queue up jobs using Work Queue)\n")
 
 # Global variable corresponding to the Work Queue object
 WORK_QUEUE = None
@@ -875,13 +925,16 @@ WORK_QUEUE = None
 # Global variable containing a mapping from target names to Work Queue task IDs
 WQIDS = defaultdict(list)
 
+
 def getWorkQueue():
     global WORK_QUEUE
     return WORK_QUEUE
 
+
 def getWQIds():
     global WQIDS
     return WQIDS
+
 
 def createWorkQueue(wq_port, debug=True, name=package):
     global WORK_QUEUE
@@ -894,14 +947,16 @@ def createWorkQueue(wq_port, debug=True, name=package):
     WORK_QUEUE.specify_algorithm(work_queue.WORK_QUEUE_SCHEDULE_TIME)
     # QYD: We don't want to specify the following extremely long keepalive times
     # because they will prevent checking "dead" workers, causing the program to wait forever
-    #WORK_QUEUE.specify_keepalive_timeout(8640000)
-    #WORK_QUEUE.specify_keepalive_interval(8640000)
+    # WORK_QUEUE.specify_keepalive_timeout(8640000)
+    # WORK_QUEUE.specify_keepalive_interval(8640000)
+
 
 def destroyWorkQueue():
     # Convenience function to destroy the Work Queue objects.
     global WORK_QUEUE, WQIDS
     WORK_QUEUE = None
     WQIDS = defaultdict(list)
+
 
 def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose=True, print_time=60):
     """
@@ -916,21 +971,23 @@ def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose
     task = work_queue.Task(command)
     cwd = os.getcwd()
     for f in input_files:
-        lf = os.path.join(cwd,f)
-        task.specify_input_file(lf,f,cache=False)
+        lf = os.path.join(cwd, f)
+        task.specify_input_file(lf, f, cache=False)
     for f in output_files:
-        lf = os.path.join(cwd,f)
-        task.specify_output_file(lf,f,cache=False)
+        lf = os.path.join(cwd, f)
+        task.specify_output_file(lf, f, cache=False)
     if tag is None: tag = command
     task.specify_tag(tag)
     task.print_time = print_time
     taskid = wq.submit(task)
     if verbose:
-        logger.info("Submitting command '%s' to the Work Queue, %staskid %i\n" % (command, "tag %s, " % tag if tag != command else "", taskid))
+        logger.info("Submitting command '%s' to the Work Queue, %staskid %i\n" % (
+            command, "tag %s, " % tag if tag != command else "", taskid))
     if tgt is not None:
         WQIDS[tgt.name].append(taskid)
     else:
         WQIDS["None"].append(taskid)
+
 
 def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None, verbose=True, print_time=60):
     """
@@ -948,10 +1005,10 @@ def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None
     task = work_queue.Task(command)
     for f in input_files:
         # print f[0], f[1]
-        task.specify_input_file(f[0],f[1],cache=False)
+        task.specify_input_file(f[0], f[1], cache=False)
     for f in output_files:
         # print f[0], f[1]
-        task.specify_output_file(f[0],f[1],cache=False)
+        task.specify_output_file(f[0], f[1], cache=False)
     if tag is None: tag = command
     task.specify_tag(tag)
     task.print_time = print_time
@@ -963,6 +1020,7 @@ def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None
     else:
         WQIDS["None"].append(taskid)
 
+
 def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
     """ This function waits ten seconds to see if a task in the Work Queue has finished. """
     global WQIDS
@@ -971,11 +1029,11 @@ def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
         wait_time = wait_intvl
         numwaits = 1
     else:
-        numwaits = int(wait_time/wait_intvl)
+        numwaits = int(wait_time / wait_intvl)
     for sec in range(numwaits):
         task = wq.wait(wait_intvl)
         if task:
-            exectime = task.cmd_execution_time/1000000
+            exectime = task.cmd_execution_time / 1000000
             if verbose:
                 logger.info('A job has finished!\n')
                 logger.info('Job name = ' + task.tag + 'command = ' + task.command + '\n')
@@ -994,13 +1052,15 @@ def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
                         tgtname = tnm
                         WQIDS[tnm].remove(task.id)
                 taskid = wq.submit(task)
-                logger.warning("Task '%s' (task %i) failed on host %s (%i seconds), resubmitted: taskid %i\n" % (task.tag, oldid, oldhost, exectime, taskid))
+                logger.warning("Task '%s' (task %i) failed on host %s (%i seconds), resubmitted: taskid %i\n" % (
+                    task.tag, oldid, oldhost, exectime, taskid))
                 WQIDS[tgtname].append(taskid)
             else:
                 if hasattr(task, 'print_time'):
                     print_time = task.print_time
-                if exectime > print_time: # Assume that we're only interested in printing jobs that last longer than a minute.
-                    logger.info("Task '%s' (task %i) finished successfully on host %s (%i seconds)\n" % (task.tag, task.id, task.hostname, exectime))
+                if exectime > print_time:  # Assume that we're only interested in printing jobs that last longer than a minute.
+                    logger.info("Task '%s' (task %i) finished successfully on host %s (%i seconds)\n" % (
+                        task.tag, task.id, task.hostname, exectime))
                 for tnm in WQIDS:
                     if task.id in WQIDS[tnm]:
                         WQIDS[tnm].remove(task.id)
@@ -1010,32 +1070,43 @@ def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
         # Please upgrade CCTools version if errors are encountered during runtime.
         if verbose:
             logger.info("Workers: %i init, %i idle, %i busy, %i total joined, %i total removed\n" \
-                % (wq.stats.workers_init, wq.stats.workers_idle, wq.stats.workers_busy, wq.stats.workers_joined, wq.stats.workers_removed))
+                        % (wq.stats.workers_init, wq.stats.workers_idle, wq.stats.workers_busy, wq.stats.workers_joined,
+                           wq.stats.workers_removed))
             logger.info("Tasks: %i running, %i waiting, %i dispatched, %i submitted, %i total complete\n" \
-                % (wq.stats.tasks_running, wq.stats.tasks_waiting, wq.stats.tasks_dispatched, wq.stats.tasks_submitted, wq.stats.tasks_done))
-            logger.info("Data: %i / %i kb sent/received\n" % (int(wq.stats.bytes_sent/1024), int(wq.stats.bytes_received/1024)))
+                        % (wq.stats.tasks_running, wq.stats.tasks_waiting, wq.stats.tasks_dispatched,
+                           wq.stats.tasks_submitted, wq.stats.tasks_done))
+            logger.info("Data: %i / %i kb sent/received\n" % (
+                int(wq.stats.bytes_sent / 1024), int(wq.stats.bytes_received / 1024)))
         else:
-            logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" %\
-            (time.ctime(), wq.stats.workers_busy, wq.stats.workers_connected, wq.stats.tasks_done, wq.stats.tasks_submitted))
+            logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" % \
+                        (time.ctime(), wq.stats.workers_busy, wq.stats.workers_connected, wq.stats.tasks_done,
+                         wq.stats.tasks_submitted))
             if time.time() - wq_wait1.t0 > 900:
                 wq_wait1.t0 = time.time()
                 logger.info('\n')
+
+
 wq_wait1.t0 = time.time()
+
 
 def wq_wait(wq, wait_time=10, wait_intvl=10, print_time=60, verbose=False):
     """ This function waits until the work queue is completely empty. """
     while not wq.empty():
         wq_wait1(wq, wait_time=wait_time, wait_intvl=wait_intvl, print_time=print_time, verbose=verbose)
 
-#=====================================#
-#| File and process management stuff |#
-#=====================================#
+
+# =====================================#
+# | File and process management stuff |#
+# =====================================#
 def click():
     """ Stopwatch function for timing. """
     ans = time.time() - click.t0
     click.t0 = time.time()
     return ans
+
+
 click.t0 = time.time()
+
 
 def splitall(path):
     allparts = []
@@ -1044,13 +1115,14 @@ def splitall(path):
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
             break
-        elif parts[1] == path: # sentinel for relative paths
+        elif parts[1] == path:  # sentinel for relative paths
             allparts.insert(0, parts[1])
             break
         else:
             path = parts[0]
             allparts.insert(0, parts[1])
     return allparts
+
 
 # Back up a file.
 def bak(path, dest=None, cwd=None, start=1):
@@ -1063,22 +1135,23 @@ def bak(path, dest=None, cwd=None, start=1):
         os.chdir(cwd)
     if os.path.exists(path):
         dnm, fnm = os.path.split(path)
-        if dnm == '' : dnm = '.'
+        if dnm == '': dnm = '.'
         base, ext = os.path.splitext(fnm)
         if dest is None:
             dest = dnm
         if not os.path.isdir(dest): os.makedirs(dest)
         i = start
         while True:
-            fnm = "%s_%i%s" % (base,i,ext)
+            fnm = "%s_%i%s" % (base, i, ext)
             newf = os.path.join(dest, fnm)
             if not os.path.exists(newf): break
             i += 1
         logger.info("Backing up %s -> %s\n" % (oldf, newf))
-        shutil.move(oldf,newf)
+        shutil.move(oldf, newf)
     if cwd != None:
         os.chdir(old_d)
     return newf
+
 
 # Purpose: Given a file name and/or an extension, do one of the following:
 # 1) If provided a file name, check the file, crash if not exist and err==True.  Return the file name.
@@ -1097,21 +1170,23 @@ def onefile(fnm=None, ext=None, err=False):
             if os.path.dirname(os.path.abspath(fnm)) != os.getcwd():
                 fsrc = os.path.abspath(fnm)
                 fdest = os.path.join(os.getcwd(), os.path.basename(fnm))
-                #-----
+                # -----
                 # If the file path doesn't correspond to the current directory, copy the file over
                 # If the file exists in the current directory already and it's different, then crash.
-                #-----
+                # -----
                 if os.path.exists(fdest):
                     if not filecmp.cmp(fsrc, fdest):
-                        logger.error("onefile() will not overwrite %s with %s\n" % (os.path.join(os.getcwd(), os.path.basename(fnm)),os.path.abspath(fnm)))
+                        logger.error("onefile() will not overwrite %s with %s\n" % (
+                            os.path.join(os.getcwd(), os.path.basename(fnm)), os.path.abspath(fnm)))
                         raise RuntimeError
                     else:
-                        logger.info("\x1b[93monefile() says the files %s and %s are identical\x1b[0m\n" % (os.path.abspath(fnm), os.getcwd()))
+                        logger.info("\x1b[93monefile() says the files %s and %s are identical\x1b[0m\n" % (
+                            os.path.abspath(fnm), os.getcwd()))
                 else:
                     logger.info("\x1b[93monefile() will copy %s to %s\x1b[0m\n" % (os.path.abspath(fnm), os.getcwd()))
                     shutil.copy2(fsrc, fdest)
             return os.path.basename(fnm)
-        elif err==True or ext is None:
+        elif err == True or ext is None:
             logger.error("File specified by %s does not exist!" % fnm)
             raise RuntimeError
         elif ext is not None:
@@ -1121,15 +1196,17 @@ def onefile(fnm=None, ext=None, err=False):
     ls = [i for i in os.listdir(cwd) if i.endswith('.%s' % ext)]
     if len(ls) != 1:
         if err:
-            logger.error("Cannot find a unique file with extension .%s in %s (%i found; %s)" % (ext, cwd, len(ls), ' '.join(ls)))
+            logger.error(
+                "Cannot find a unique file with extension .%s in %s (%i found; %s)" % (ext, cwd, len(ls), ' '.join(ls)))
             raise RuntimeError
         else:
             warn_once("Cannot find a unique file with extension .%s in %s (%i found; %s)" %
-                      (ext, cwd, len(ls), ' '.join(ls)), warnhash = "Found %i .%s files" % (len(ls), ext))
+                      (ext, cwd, len(ls), ' '.join(ls)), warnhash="Found %i .%s files" % (len(ls), ext))
     else:
         answer = os.path.basename(ls[0])
-        warn_once("Autodetected %s in %s" % (answer, cwd), warnhash = "Autodetected %s" % answer)
+        warn_once("Autodetected %s in %s" % (answer, cwd), warnhash="Autodetected %s" % answer)
     return answer
+
 
 # Purpose: Given a file name / file list and/or an extension, do one of the following:
 # 1) If provided a file list, check each file in the list
@@ -1169,16 +1246,18 @@ def listfiles(fnms=None, ext=None, err=False, dnm=None):
         if os.path.dirname(os.path.abspath(fnm)) != os.getcwd():
             fsrc = os.path.abspath(fnm)
             fdest = os.path.join(os.getcwd(), os.path.basename(fnm))
-            #-----
+            # -----
             # If the file path doesn't correspond to the current directory, copy the file over
             # If the file exists in the current directory already and it's different, then crash.
-            #-----
+            # -----
             if os.path.exists(fdest):
                 if not filecmp.cmp(fsrc, fdest):
-                    logger.error("onefile() will not overwrite %s with %s\n" % (os.path.join(os.getcwd(), os.path.basename(fnm)),os.path.abspath(fnm)))
+                    logger.error("onefile() will not overwrite %s with %s\n" % (
+                        os.path.join(os.getcwd(), os.path.basename(fnm)), os.path.abspath(fnm)))
                     raise RuntimeError
                 else:
-                    logger.info("\x1b[93monefile() says the files %s and %s are identical\x1b[0m\n" % (os.path.abspath(fnm), os.getcwd()))
+                    logger.info("\x1b[93monefile() says the files %s and %s are identical\x1b[0m\n" % (
+                        os.path.abspath(fnm), os.getcwd()))
                     answer[ifnm] = os.path.basename(fnm)
             else:
                 logger.info("\x1b[93monefile() will copy %s to %s\x1b[0m\n" % (os.path.abspath(fnm), os.getcwd()))
@@ -1186,6 +1265,7 @@ def listfiles(fnms=None, ext=None, err=False, dnm=None):
                 answer[ifnm] = os.path.basename(fnm)
     os.chdir(cwd)
     return answer
+
 
 def extract_tar(tarfnm, fnms, force=False):
     """
@@ -1219,9 +1299,11 @@ def extract_tar(tarfnm, fnms, force=False):
     # Extract files to the destination.
     arch.extractall(fdir, members=members)
 
+
 def GoInto(Dir):
     if os.path.exists(Dir):
-        if os.path.isdir(Dir): pass
+        if os.path.isdir(Dir):
+            pass
         else:
             logger.error("Tried to create directory %s, it exists but isn't a directory\n" % newdir)
             raise RuntimeError
@@ -1229,33 +1311,44 @@ def GoInto(Dir):
         os.makedirs(Dir)
     os.chdir(Dir)
 
+
 def allsplit(Dir):
     # Split a directory into all directories involved.
     s = os.path.split(os.path.normpath(Dir))
-    if s[1] == '' or s[1] == '.' : return []
+    if s[1] == '' or s[1] == '.': return []
     return allsplit(s[0]) + [s[1]]
+
 
 def Leave(Dir):
     if os.path.split(os.getcwd())[1] != Dir:
-        logger.error("Trying to leave directory %s, but we're actually in directory %s (check your code)\n" % (Dir,os.path.split(os.getcwd())[1]))
+        logger.error("Trying to leave directory %s, but we're actually in directory %s (check your code)\n" % (
+            Dir, os.path.split(os.getcwd())[1]))
         raise RuntimeError
     for i in range(len(allsplit(Dir))):
         os.chdir('..')
 
+
 # Dictionary containing specific error messages for specific missing files or file patterns
-specific_lst = [(['mdrun','grompp','trjconv','g_energy','g_traj'], "Make sure to install GROMACS and add it to your path (or set the gmxpath option)"),
+specific_lst = [(['mdrun', 'grompp', 'trjconv', 'g_energy', 'g_traj'],
+                 "Make sure to install GROMACS and add it to your path (or set the gmxpath option)"),
                 (['force.mdin', 'stage.leap'], "This file is needed for setting up AMBER force matching targets"),
-                (['conf.pdb', 'mono.pdb'], "This file is needed for setting up OpenMM condensed phase property targets"),
-                (['liquid.xyz', 'liquid.key', 'mono.xyz', 'mono.key'], "This file is needed for setting up OpenMM condensed phase property targets"),
-                (['dynamic', 'analyze', 'minimize', 'testgrad', 'vibrate', 'optimize', 'polarize', 'superpose'], "Make sure to install TINKER and add it to your path (or set the tinkerpath option)"),
-                (['runcuda.sh', 'npt.py', 'npt_tinker.py'], "This file belongs in the ForceBalance source directory, not sure why it is missing"),
+                (['conf.pdb', 'mono.pdb'],
+                 "This file is needed for setting up OpenMM condensed phase property targets"),
+                (['liquid.xyz', 'liquid.key', 'mono.xyz', 'mono.key'],
+                 "This file is needed for setting up OpenMM condensed phase property targets"),
+                (['dynamic', 'analyze', 'minimize', 'testgrad', 'vibrate', 'optimize', 'polarize', 'superpose'],
+                 "Make sure to install TINKER and add it to your path (or set the tinkerpath option)"),
+                (['runcuda.sh', 'npt.py', 'npt_tinker.py'],
+                 "This file belongs in the ForceBalance source directory, not sure why it is missing"),
                 (['input.xyz'], "This file is needed for TINKER molecular property targets"),
                 (['.*key$', '.*xyz$'], "I am guessing this file is probably needed by TINKER"),
-                (['.*gro$', '.*top$', '.*itp$', '.*mdp$', '.*ndx$'], "I am guessing this file is probably needed by GROMACS")
+                (['.*gro$', '.*top$', '.*itp$', '.*mdp$', '.*ndx$'],
+                 "I am guessing this file is probably needed by GROMACS")
                 ]
 
 # Build a dictionary mapping all of the keys in the above lists to their error messages
-specific_dct = dict(list(itertools.chain(*[[(j,i[1]) for j in i[0]] for i in specific_lst])))
+specific_dct = dict(list(itertools.chain(*[[(j, i[1]) for j in i[0]] for i in specific_lst])))
+
 
 def MissingFileInspection(fnm):
     fnm = os.path.split(fnm)[1]
@@ -1267,17 +1360,19 @@ def MissingFileInspection(fnm):
             answer += "%s\n" % specific_dct[key]
     return answer
 
+
 def wopen(dest, binary=False):
     """ If trying to write to a symbolic link, remove it first. """
     if os.path.islink(dest):
         logger.warning("Trying to write to a symbolic link %s, removing it first\n" % dest)
         os.unlink(dest)
     if binary:
-        return open(dest,'wb')
+        return open(dest, 'wb')
     else:
-        return open(dest,'w')
+        return open(dest, 'w')
 
-def LinkFile(src, dest, nosrcok = False):
+
+def LinkFile(src, dest, nosrcok=False):
     if os.path.abspath(src) == os.path.abspath(dest): return
     if os.path.exists(src):
         # Remove broken link
@@ -1285,15 +1380,19 @@ def LinkFile(src, dest, nosrcok = False):
             os.remove(dest)
             os.symlink(src, dest)
         elif os.path.exists(dest):
-            if os.path.islink(dest): pass
+            if os.path.islink(dest):
+                pass
             else:
-                logger.error("Tried to create symbolic link %s to %s, destination exists but isn't a symbolic link\n" % (src, dest))
+                logger.error(
+                    "Tried to create symbolic link %s to %s, destination exists but isn't a symbolic link\n" % (
+                        src, dest))
                 raise RuntimeError
         else:
             os.symlink(src, dest)
     else:
         if not nosrcok:
-            logger.error("Tried to create symbolic link %s to %s, but source file doesn't exist%s\n" % (src,dest,MissingFileInspection(src)))
+            logger.error("Tried to create symbolic link %s to %s, but source file doesn't exist%s\n" % (
+                src, dest, MissingFileInspection(src)))
             raise RuntimeError
 
 
@@ -1306,8 +1405,10 @@ def CopyFile(src, dest):
         else:
             shutil.copy2(src, dest)
     else:
-        logger.error("Tried to copy %s to %s, but source file doesn't exist%s\n" % (src,dest,MissingFileInspection(src)))
+        logger.error(
+            "Tried to copy %s to %s, but source file doesn't exist%s\n" % (src, dest, MissingFileInspection(src)))
         raise RuntimeError
+
 
 def link_dir_contents(abssrcdir, absdestdir):
     for fnm in os.listdir(abssrcdir):
@@ -1317,13 +1418,15 @@ def link_dir_contents(abssrcdir, absdestdir):
             os.remove(destfnm)
         if os.path.isfile(srcfnm) or (os.path.isdir(srcfnm) and fnm == 'IC'):
             if not os.path.exists(destfnm):
-                #print "Linking %s to %s" % (srcfnm, destfnm)
+                # print "Linking %s to %s" % (srcfnm, destfnm)
                 os.symlink(srcfnm, destfnm)
+
 
 def remove_if_exists(fnm):
     """ Remove the file if it exists (doesn't return an error). """
     if os.path.exists(fnm):
         os.remove(fnm)
+
 
 def which(fnm):
     # Get the location of a file.  Works only on UNIX-like file systems.
@@ -1332,6 +1435,7 @@ def which(fnm):
     except:
         return ''
 
+
 def copy_tree_over(src, dest):
     """
     Copy a source directory tree to a destination directory tree,
@@ -1339,11 +1443,12 @@ def copy_tree_over(src, dest):
     the destination folder, which can reduce the number of times
     shutil.rmtree needs to be called.
     """
-    # From https://stackoverflow.com/questions/9160227/dir-util-copy-tree-fails-after-shutil-rmtree/28055993 : 
-    # If you copy folder, then remove it, then copy again it will fail, because it caches all the created dirs. 
+    # From https://stackoverflow.com/questions/9160227/dir-util-copy-tree-fails-after-shutil-rmtree/28055993 :
+    # If you copy folder, then remove it, then copy again it will fail, because it caches all the created dirs.
     # To workaround you can clear _path_created before copy:
     distutils.dir_util._path_created = {}
     distutils.dir_util.copy_tree(src, dest)
+
 
 # Thanks to cesarkawakami on #python (IRC freenode) for this code.
 class LineChunker(object):
@@ -1356,7 +1461,7 @@ class LineChunker(object):
         # "a" with umlaut on top.  I guess we can ignore these for now.  For some reason,
         # Py2 never required decoding of data, I can simply add it to the wtring.
         # self.buf += data # Old Py2 code...
-        self.buf += data.decode('utf-8')#errors='ignore')
+        self.buf += data.decode('utf-8')  # errors='ignore')
         self.nomnom()
 
     def close(self):
@@ -1376,7 +1481,9 @@ class LineChunker(object):
     def __exit__(self, *args, **kwargs):
         self.close()
 
-def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin = "", print_command = True, copy_stdout = True, copy_stderr = False, persist = False, expand_cr=False, print_error=True, rbytes=1, cwd=None, **kwargs):
+
+def _exec(command, print_to_screen=False, outfnm=None, logfnm=None, stdin="", print_command=True, copy_stdout=True,
+          copy_stderr=False, persist=False, expand_cr=False, print_error=True, rbytes=1, cwd=None, **kwargs):
     """Runs command line using subprocess, optionally returning stdout.
     Options:
     command (required) = Name of the command you want to execute
@@ -1393,7 +1500,8 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
     """
 
     # Dictionary of options to be passed to the Popen object.
-    cmd_options={'shell':isinstance(command, six.string_types), 'stdin':PIPE, 'stdout':PIPE, 'stderr':PIPE, 'universal_newlines':expand_cr, 'cwd':cwd}
+    cmd_options = {'shell': isinstance(command, six.string_types), 'stdin': PIPE, 'stdout': PIPE, 'stderr': PIPE,
+                   'universal_newlines': expand_cr, 'cwd': cwd}
 
     # If the current working directory is provided, the outputs will be written to there as well.
     if cwd is not None:
@@ -1405,26 +1513,28 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
     # "write to file" : Function for writing some characters to the log and/or output files.
     def wtf(out):
         if logfnm is not None:
-            with open(logfnm,'ab+') as f:
+            with open(logfnm, 'ab+') as f:
                 f.write(out.encode('utf-8'))
                 f.flush()
         if outfnm is not None:
-            with open(outfnm,'wb+' if wtf.first else 'ab+') as f:
+            with open(outfnm, 'wb+' if wtf.first else 'ab+') as f:
                 f.write(out.encode('utf-8'))
                 f.flush()
         wtf.first = False
+
     wtf.first = True
 
     # Preserve backwards compatibility; sometimes None gets passed to stdin.
     if stdin is None: stdin = ""
 
     if print_command:
-        logger.info("Executing process: \x1b[92m%-50s\x1b[0m%s%s%s%s\n" % (' '.join(command) if type(command) is list else command,
-                                                               " In: %s" % cwd if cwd is not None else "",
-                                                               " Output: %s" % outfnm if outfnm is not None else "",
-                                                               " Append: %s" % logfnm if logfnm is not None else "",
-                                                               (" Stdin: %s" % stdin.replace('\n','\\n')) if stdin else ""))
-        wtf("Executing process: %s%s\n" % (command, (" Stdin: %s" % stdin.replace('\n','\\n')) if stdin else ""))
+        logger.info("Executing process: \x1b[92m%-50s\x1b[0m%s%s%s%s\n" % (
+            ' '.join(command) if type(command) is list else command,
+            " In: %s" % cwd if cwd is not None else "",
+            " Output: %s" % outfnm if outfnm is not None else "",
+            " Append: %s" % logfnm if logfnm is not None else "",
+            (" Stdin: %s" % stdin.replace('\n', '\\n')) if stdin else ""))
+        wtf("Executing process: %s%s\n" % (command, (" Stdin: %s" % stdin.replace('\n', '\\n')) if stdin else ""))
 
     cmd_options.update(kwargs)
     p = subprocess.Popen(command, **cmd_options)
@@ -1433,16 +1543,17 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
     p.stdin.write(stdin.encode('ascii'))
     p.stdin.close()
 
-    #===============================================================#
-    #| Read the output streams from the process.  This is a bit    |#
-    #| complicated because programs like GROMACS tend to print out |#
-    #| stdout as well as stderr streams, and also carriage returns |#
-    #| along with newline characters.                              |#
-    #===============================================================#
+    # ===============================================================#
+    # | Read the output streams from the process.  This is a bit    |#
+    # | complicated because programs like GROMACS tend to print out |#
+    # | stdout as well as stderr streams, and also carriage returns |#
+    # | along with newline characters.                              |#
+    # ===============================================================#
     # stdout and stderr streams of the process.
     streams = [p.stdout, p.stderr]
     # Are we using Python 2?
     p2 = sys.version_info.major == 2
+
     # These are functions that take chunks of lines (read) as inputs.
     def process_out(read):
         if print_to_screen:
@@ -1454,6 +1565,7 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
         if copy_stdout:
             process_out.stdout.append(read)
             wtf(read)
+
     process_out.stdout = []
 
     def process_err(read):
@@ -1466,6 +1578,7 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
         if copy_stderr:
             process_out.stdout.append(read)
             wtf(read)
+
     process_err.stderr = []
     # This reads the streams one byte at a time, and passes it to the LineChunker
     # which splits it by either newline or carriage return.
@@ -1493,7 +1606,7 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
                         else:
                             read += fhread(1)
                             read_nbytes += 1
-                        if read_nbytes > 10+rbytes:
+                        if read_nbytes > 10 + rbytes:
                             raise RuntimeError("Failed to decode stdout from external process.")
                         if not read:
                             streams.remove(p.stdout)
@@ -1515,7 +1628,7 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
                         else:
                             read += fhread(1)
                             read_nbytes += 1
-                        if read_nbytes > 10+rbytes:
+                        if read_nbytes > 10 + rbytes:
                             raise RuntimeError("Failed to decode stderr from external process.")
                         if not read:
                             streams.remove(p.stderr)
@@ -1545,12 +1658,14 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
             logger.warning("[====] \x1b[91mEnd o'Message\x1b[0m [====]\n")
         if persist:
             if print_error:
-                logger.info("%s gave a return code of %i (it may have crashed) -- carrying on\n" % (command, p.returncode))
+                logger.info(
+                    "%s gave a return code of %i (it may have crashed) -- carrying on\n" % (command, p.returncode))
         else:
             # This code (commented out) would not throw an exception, but instead exit with the returncode of the crashed program.
             # sys.stderr.write("\x1b[1;94m%s\x1b[0m gave a return code of %i (\x1b[91mit may have crashed\x1b[0m)\n" % (command, p.returncode))
             # sys.exit(p.returncode)
-            logger.error("\x1b[1;94m%s\x1b[0m gave a return code of %i (\x1b[91mit may have crashed\x1b[0m)\n\n" % (command, p.returncode))
+            logger.error("\x1b[1;94m%s\x1b[0m gave a return code of %i (\x1b[91mit may have crashed\x1b[0m)\n\n" % (
+                command, p.returncode))
             raise RuntimeError
 
     # Return the output in the form of a list of lines, so we can loop over it using "for line in output".
@@ -1558,19 +1673,25 @@ def _exec(command, print_to_screen = False, outfnm = None, logfnm = None, stdin 
     if Out[-1] == '':
         Out = Out[:-1]
     return Out
+
+
 _exec.returncode = None
+
 
 def warn_press_key(warning, timeout=10):
     logger.warning(warning + '\n')
     if sys.stdin.isatty():
-        logger.warning("\x1b[1;91mPress Enter or wait %i seconds (I assume no responsibility for what happens after this!)\x1b[0m\n" % timeout)
+        logger.warning(
+            "\x1b[1;91mPress Enter or wait %i seconds (I assume no responsibility for what happens after this!)\x1b[0m\n" % timeout)
         try:
             rlist, wlist, xlist = select([sys.stdin], [], [], timeout)
             if rlist:
                 sys.stdin.readline()
-        except: pass
+        except:
+            pass
 
-def warn_once(warning, warnhash = None):
+
+def warn_once(warning, warnhash=None):
     """ Prints a warning but will only do so once in a given run. """
     if warnhash is None:
         warnhash = warning
@@ -1582,11 +1703,14 @@ def warn_once(warning, warnhash = None):
     elif type(warning) is list:
         for line in warning:
             logger.info(line + '\n')
+
+
 warn_once.already = set()
 
-#=========================================#
-#| Development stuff (not commonly used) |#
-#=========================================#
+
+# =========================================#
+# | Development stuff (not commonly used) |#
+# =========================================#
 def concurrent_map(func, data):
     """
     Similar to the bultin function map(). But spawn a thread for each argument

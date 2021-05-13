@@ -1,25 +1,27 @@
+import warnings
+
 import numpy as np
 import scipy.weave
-import warnings
+
 
 # reference implementation
 def __bond_angles(xyzlist, angle_indices):
     """Compute the bond angles for each frame in xyzlist
-    
+
     This is a reference single threaded implementation in python/numpy
-    
+
     Parameters
     ----------
     xyzlist : np.ndarray, shape=[n_frames, n_atoms, 3], dtype=float
         The cartesian coordinates
     angle_indices : np.ndarray, shape[n_angles, 3], dtype=int
         Each row gives the indices of three atoms which together make an angle
-        
+
     Returns
     -------
     angles : np.ndarray, shape=[n_frames, n_angles], dtype=float
     """
-    
+
     n_frames = xyzlist.shape[0]
     angles = np.zeros((n_frames, len(angle_indices)))
 
@@ -31,38 +33,39 @@ def __bond_angles(xyzlist, angle_indices):
             v_norm = np.linalg.norm(v_prime)
 
             angles[i, j] = np.arccos(np.dot(u_prime, v_prime) /
-                (u_norm * v_norm))
+                                     (u_norm * v_norm))
 
     return angles
+
 
 # multithreaded implementation
 def bond_angles(xyzlist, angle_indices):
     """Compute the bond angles for each frame in xyzlist
-    
+
     This is a OpenMP multithreaded parallel implementation in C++ using weave
-    
+
     Parameters
     ----------
     xyzlist : np.ndarray, shape=[n_frames, n_atoms, 3], dtype=float
         The cartesian coordinates
     angle_indices : np.ndarray, shape[n_angles, 3], dtype=int
         Each row gives the indices of three atoms which together make an angle
-        
+
     Returns
     -------
     angles : np.ndarray, shape=[n_frames, n_angles], dtype=float
     """
-    
+
     # check shapes
     n_frames, n_atoms, n_dims = xyzlist.shape
     if not n_dims == 3:
         raise ValueError("xyzlist must be an n x m x 3 array")
-    try: 
+    try:
         n_angles, width = angle_indices.shape
         assert width is 3
     except (AttributeError, ValueError, AssertionError):
         raise ValueError('angle_indices must be an n x 3 array')
-    
+
     # check type
     if xyzlist.dtype != np.float32:
         warnings.warn("xyzlist is not float32: copying", RuntimeWarning)
@@ -70,7 +73,7 @@ def bond_angles(xyzlist, angle_indices):
     if angle_indices.dtype != np.int32:
         warnings.warn("angle_indpyices is not int32: copying", RuntimeWarning)
         angle_indices = np.array(angle_indices, dtype=np.int32)
-    
+
     # make sure contiguous
     if not xyzlist.flags.c_contiguous:
         warnings.warn("xyzlist is not contiguous: copying", RuntimeWarning)
@@ -78,9 +81,9 @@ def bond_angles(xyzlist, angle_indices):
     if not angle_indices.flags.c_contiguous:
         warnings.warn("angle_indices is not contiguous: copying", RuntimeWarning)
         angle_indices = np.copy(angle_indices)
-    
+
     angles = np.zeros((n_frames, len(angle_indices)), dtype=np.double)
-    
+
     scipy.weave.inline(r"""
     Py_BEGIN_ALLOW_THREADS
     int i, j, m, o, n;
@@ -112,11 +115,10 @@ def bond_angles(xyzlist, angle_indices):
     Py_END_ALLOW_THREADS
     """, ["xyzlist", "angle_indices", "angles", "n_frames",
           "n_angles", "n_atoms"],
-         extra_compile_args = ["-O3", "-fopenmp"],  
-         extra_link_args=['-lgomp'],
-         compiler='gcc')
+                       extra_compile_args=["-O3", "-fopenmp"],
+                       extra_link_args=['-lgomp'],
+                       compiler='gcc')
     # note that weave by default includes math.h in the generated cpp file, which
     # declares sqrt and acos
 
     return angles
-

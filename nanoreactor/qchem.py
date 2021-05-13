@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" 
+"""
 Python interface to Q-Chem, very useful for automating Q-Chem calculations.
 
 Contains a QChem class representing a Q-Chem calculation, where calling
@@ -11,14 +11,17 @@ Also contains a number of functions to wrap around TS/IRC calculations and
 make the results easier to use.
 """
 
-import os, sys, shutil, glob
-import traceback
-import time
-import numpy as np
-from .molecule import Molecule, Elements, arc
-from .nifty import _exec, monotonic_decreasing
-from collections import defaultdict, OrderedDict
+import glob
+import os
+import shutil
+import sys
+from collections import OrderedDict, defaultdict
 from copy import deepcopy
+
+import numpy as np
+
+from .molecule import Elements, Molecule, arc
+from .nifty import _exec, monotonic_decreasing
 
 # Note: On biox3 there are MPI problems.
 
@@ -81,13 +84,15 @@ vib_top = """#==========================================#
 erroks = defaultdict(list)
 erroks['rpath'] = ['Bad Hessian -- imaginary mode too soft', 'Bad Hessian -- no negative eigenvalue',
                    'Bad initial gradient', 'Failed line search', 'First_IRC_step: Illegal value of coordinates',
-                   'First_IRC_step: Internal programming error.', 'IRC backup failure', 'IRC failed bisector line search',
+                   'First_IRC_step: Internal programming error.', 'IRC backup failure',
+                   'IRC failed bisector line search',
                    'IRC failed final bisector step', 'IRC --- Failed line search', 'IRC internal programming error',
                    'Maxium number of steps reached.', 'NAtom.GT.NAtoms', 'RPATH_ITER_MAX reached.',
                    'rpath_new: EWCs not yet implemented', 'rpath_new: Unimplemented coordinates',
                    'RPath_new: unimplemented coordinates.', 'rpath: no hessian at the start.',
                    'rpath: Starting Geometry Does NOT Correspond to TS']
 erroks['opt'] = ['OPTIMIZE fatal error']
+
 
 def tarexit(exitstat=0):
     """
@@ -148,7 +153,8 @@ def tarexit(exitstat=0):
         for f in saved:
             shutil.copy2(f, 'saved/%s' % f)
     # Actually execute the tar command.
-    _exec("tar cjf %s %s%s" % (tarexit.tarfnm, ' '.join(include_files), ' --remove-files' if tarexit.remove_files else ''), print_command=True)
+    _exec("tar cjf %s %s%s" % (
+        tarexit.tarfnm, ' '.join(include_files), ' --remove-files' if tarexit.remove_files else ''), print_command=True)
     # Touch the file to ensure that something is created (even zero bytes).
     _exec("touch %s" % tarexit.tarfnm)
     if tarexit.remove_files:
@@ -160,19 +166,33 @@ def tarexit(exitstat=0):
         if tarexit.remove_dirs and os.path.isdir(f) and ('.d' in f):
             shutil.rmtree(f)
     sys.exit(exitstat)
+
+
 tarexit.tarfnm = 'default.tar.bz2'
 tarexit.include = []
 tarexit.exclude = []
 tarexit.save = ['*.log']
-tarexit.archive_dirs=False
-tarexit.remove_files=True
-tarexit.remove_dirs=True
+tarexit.archive_dirs = False
+tarexit.remove_files = True
+tarexit.remove_dirs = True
 
 # Basis set combinations which may be provided as an argument to "basis".
 # Provides rudimentary basis set mixing functionality.  You may define
 # a mapping from element to basis set here.
-basdict = OrderedDict([('%s_lanl2dz' % bas, OrderedDict([(Elements[i], 'lanl2dz' if i > 10 else bas) for i in range(1, 94)])) for
-                       bas in ['3-21g', '3-21+g', '3-21g*', 
+basdict = OrderedDict(
+    [('%s_lanl2dz' % bas, OrderedDict([(Elements[i], 'lanl2dz' if i > 10 else bas) for i in range(1, 94)])) for
+     bas in ['3-21g', '3-21+g', '3-21g*',
+             '6-31g', '6-31g*', '6-31g(d)', '6-31g**', '6-31g(d,p)',
+             '6-31+g', '6-31+g*', '6-31+g(d)', '6-31+g**', '6-31+g(d,p)',
+             '6-31++g', '6-31++g*', '6-31++g(d)', '6-31++g**', '6-31++g(d,p)',
+             '6-311g', '6-311g*', '6-311g(d)', '6-311g**', '6-311g(d,p)',
+             '6-311+g', '6-311+g*', '6-311+g(d)', '6-311+g**', '6-311+g(d,p)',
+             '6-311++g', '6-311++g*', '6-311++g(d)', '6-311++g**', '6-311++g(d,p)']])
+
+# In most cases, the ECP can be determined from the basis
+ecpdict = OrderedDict([('lanl2dz', 'lanl2dz')] +
+                      [('%s_lanl2dz' % bas, 'lanl2dz') for
+                       bas in ['3-21g', '3-21+g', '3-21g*',
                                '6-31g', '6-31g*', '6-31g(d)', '6-31g**', '6-31g(d,p)',
                                '6-31+g', '6-31+g*', '6-31+g(d)', '6-31+g**', '6-31+g(d,p)',
                                '6-31++g', '6-31++g*', '6-31++g(d)', '6-31++g**', '6-31++g(d,p)',
@@ -180,16 +200,6 @@ basdict = OrderedDict([('%s_lanl2dz' % bas, OrderedDict([(Elements[i], 'lanl2dz'
                                '6-311+g', '6-311+g*', '6-311+g(d)', '6-311+g**', '6-311+g(d,p)',
                                '6-311++g', '6-311++g*', '6-311++g(d)', '6-311++g**', '6-311++g(d,p)']])
 
-# In most cases, the ECP can be determined from the basis
-ecpdict = OrderedDict([('lanl2dz', 'lanl2dz')] + 
-                      [('%s_lanl2dz' % bas, 'lanl2dz') for
-                       bas in ['3-21g', '3-21+g', '3-21g*', 
-                               '6-31g', '6-31g*', '6-31g(d)', '6-31g**', '6-31g(d,p)',
-                               '6-31+g', '6-31+g*', '6-31+g(d)', '6-31+g**', '6-31+g(d,p)',
-                               '6-31++g', '6-31++g*', '6-31++g(d)', '6-31++g**', '6-31++g(d,p)',
-                               '6-311g', '6-311g*', '6-311g(d)', '6-311g**', '6-311g(d,p)',
-                               '6-311+g', '6-311+g*', '6-311+g(d)', '6-311+g**', '6-311+g(d,p)',
-                               '6-311++g', '6-311++g*', '6-311++g(d)', '6-311++g**', '6-311++g(d,p)']])
 
 def get_basis(basis, molecule=None):
     """
@@ -201,7 +211,7 @@ def get_basis(basis, molecule=None):
         Name of a Q-Chem gaussian basis set or a custom basis as defined above
     molecule : Molecule object
         Required in case of a general basis (for looking up elements in the basis set dictionary)
-    
+
     Returns
     -------
     basisname : str
@@ -238,6 +248,7 @@ def get_basis(basis, molecule=None):
         ecpname = ecp.lower()
     return basisname, basissect, ecpname, ecpsect
 
+
 def prepare_template(docstring, fout, chg, mult, method, basis, epsilon=None, molecule=None):
     """
     Prepare a Q-Chem template file.
@@ -261,26 +272,31 @@ def prepare_template(docstring, fout, chg, mult, method, basis, epsilon=None, mo
     """
     basisname, basissect, ecpname, ecpsect = get_basis(basis, molecule)
     # Write Q-Chem template file.
-    with open(fout,'w') as f: print(docstring.format(chg=chg, mult=mult, method=method, pcm=('\nsolvent_method      cosmo' if epsilon is not None else ''), basis=(basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname != None else ''))), file=f)
+    with open(fout, 'w') as f:
+        print(docstring.format(chg=chg, mult=mult, method=method,
+                               pcm=('\nsolvent_method      cosmo' if epsilon is not None else ''), basis=(
+                    basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname != None else ''))),
+              file=f)
     # Print general basis and ECP sections to the Q-Chem template file.
     if epsilon is not None:
-        with open(fout,'a') as f:
+        with open(fout, 'a') as f:
             print(file=f)
             print('$solvent', file=f)
             print('dielectric %f' % epsilon, file=f)
             print('$end', file=f)
     if basisname == 'gen':
-        with open(fout,'a') as f:
+        with open(fout, 'a') as f:
             print(file=f)
             print('$basis', file=f)
             print('\n'.join(basissect), file=f)
             print('$end', file=f)
     if ecpname == 'gen':
-        with open(fout,'a') as f:
+        with open(fout, 'a') as f:
             print(file=f)
             print('$ecp', file=f)
             print('\n'.join(ecpsect), file=f)
             print('$end', file=f)
+
 
 class QChem(object):
     """
@@ -288,6 +304,7 @@ class QChem(object):
     because it was helpful to execute a chain of calculations on a
     single geometry.
     """
+
     def __init__(self, fin, ftype=None, charge=None, mult=None, method=None,
                  basis=None, qcin=None, qcout=None, qcdir=None, readsave=None,
                  readguess=True, clean=False, qcsave=True):
@@ -364,9 +381,9 @@ class QChem(object):
         # then use the suffix 'qcin' add an underscore so we
         # don't accidentally overwrite our original file.
         if qcin == None:
-            qcin = os.path.splitext(fin)[0]+'.in'
+            qcin = os.path.splitext(fin)[0] + '.in'
         if qcin == fin and fin.endswith('.in'):
-            self.qcin = os.path.splitext(fin)[0]+'.qcin'
+            self.qcin = os.path.splitext(fin)[0] + '.qcin'
         elif qcin == fin:
             raise RuntimeError('Please do not provide a file with extension .qcin')
         else:
@@ -388,17 +405,17 @@ class QChem(object):
             if mult != None:
                 self.M.mult = mult
             if method != None:
-                self.M.edit_qcrems({'method' : method})
+                self.M.edit_qcrems({'method': method})
             # Treat custom basis and ECP.
             ecpname = None
             ecpsect = None
             if basis != None:
                 basisname, basissect, ecpname, ecpsect = get_basis(basis, self.M)
-                self.M.edit_qcrems({'basis' : basisname})
+                self.M.edit_qcrems({'basis': basisname})
                 if basisname == 'gen':
                     self.M.qctemplate['basis'] = basissect
             if ecpname != None:
-                self.M.edit_qcrems({'ecp' : ecpname})
+                self.M.edit_qcrems({'ecp': ecpname})
                 if ecpname == 'gen':
                     self.M.qctemplate['ecp'] = ecpsect
         # The current job type, which we can set using
@@ -409,8 +426,8 @@ class QChem(object):
         # Extra rem variables for a given job type.
         self.remextra = OrderedDict()
         # Default name of Q-Chem output file
-        self.qcout = os.path.splitext(self.qcin)[0]+".out" if qcout == None else qcout
-        self.qcerr = os.path.splitext(self.qcin)[0]+".err"
+        self.qcout = os.path.splitext(self.qcin)[0] + ".out" if qcout == None else qcout
+        self.qcerr = os.path.splitext(self.qcin)[0] + ".err"
         # Saved Q-Chem calculations if there is more than one.
         self.qcins = []
         self.qcouts = []
@@ -418,7 +435,7 @@ class QChem(object):
         # Specify whether to tack "-save" onto the end of each Q-Chem call.
         self.qcsave = qcsave
         # Q-Chem scratch directory
-        self.qcdir = os.path.splitext(self.qcin)[0]+".d" if qcdir == None else qcdir
+        self.qcdir = os.path.splitext(self.qcin)[0] + ".d" if qcdir == None else qcdir
         # Flag to read SCF guess at the first calculation
         self.readguess = readguess
         # Without guess to read from, use "scf_guess core"
@@ -429,8 +446,8 @@ class QChem(object):
         self.errmsg = ''
         # qcdsav is "known-good qcdir for this object",
         # used to restore from failed calcs (e.g. SCF failure)
-        self.qcdsav = self.qcdir+'sav'
-        #--------
+        self.qcdsav = self.qcdir + 'sav'
+        # --------
         # The clean option makes sure nothing on the disk influences this calculation.
         # This can be a bit confusing.  There are two modes of usage:
         # 1) Clean OFF.  Calculation uses whatever is in qcdir and backs it up to qcdsav on successful calcs.
@@ -446,12 +463,15 @@ class QChem(object):
         if isinstance(self.readsave, str):
             if not os.path.isdir(self.readsave):
                 raise RuntimeError('Tried to initialize Q-Chem reading from a save folder but does not exist')
-            if self.readsave == self.qcdsav: pass
+            if self.readsave == self.qcdsav:
+                pass
             elif os.path.exists(self.qcdsav):
                 shutil.rmtree(self.qcdsav)
                 shutil.copytree(self.readsave, self.qcdsav)
-        elif isinstance(self.readsave, int) and self.readsave: pass
-        elif os.path.exists(self.qcdsav): shutil.rmtree(self.qcdsav)
+        elif isinstance(self.readsave, int) and self.readsave:
+            pass
+        elif os.path.exists(self.qcdsav):
+            shutil.rmtree(self.qcdsav)
         # Remove self.qcdir; it will be restored from self.qcdsav right before calling Q-Chem.
         if os.path.exists(self.qcdir): shutil.rmtree(self.qcdir)
 
@@ -496,9 +516,10 @@ class QChem(object):
         reached will not trigger a parser error.
         """
         try:
-            return Molecule(self.qcout, errok=erroks[self.jobtype.lower()] + ['SCF failed to converge', 'Maximum optimization cycles reached'])
+            return Molecule(self.qcout, errok=erroks[self.jobtype.lower()] + ['SCF failed to converge',
+                                                                              'Maximum optimization cycles reached'])
         except RuntimeError:
-            tarexit.include=['*']
+            tarexit.include = ['*']
             tarexit(1)
 
     def call_qchem(self, debug=False):
@@ -537,10 +558,10 @@ class QChem(object):
         # the number of processors.  The environment variable is then unset.
         # If not set, default to one.
         if 'OMP_NUM_THREADS' in os.environ:
-            cores=int(os.environ['OMP_NUM_THREADS'])
+            cores = int(os.environ['OMP_NUM_THREADS'])
             del os.environ['OMP_NUM_THREADS']
         else:
-            cores=1
+            cores = 1
         # Q-Chem parallel (OpenMP), serial, and parallel (MPI) commands.
         # The MPI command is useful for jobs that aren't OpenMP-parallel,
         # such as stability analysis (which uses TDDFT/CIS).
@@ -565,13 +586,13 @@ class QChem(object):
         # I don't remember why this is here.  Something about "Recomputing EXC"?
         # if 'scf_algorithm' in self.remscf and self.remscf['scf_algorithm'] == 'rca_diis': mode = "serial"
 
-        #----
+        # ----
         # Note that on some clusters I was running into random
         # crashes, which led to this code becoming more complicated.
         # The code is now cleaned up because I haven't seen the errors
         # in a while .. but if they come back, make sure to look back
         # in the commit history.
-        #----
+        # ----
 
         # When "clean mode" is on, we always start from a clean slate
         # (restore qcdir from qcdsav if exist; otherwise delete)
@@ -599,7 +620,7 @@ class QChem(object):
         try:
             _exec('%s %s %s %s &> %s' % (qccmd_, self.qcin, self.qcout, self.qcdir, self.qcerr), print_command=False)
         except:
-            tarexit.include=['*']
+            tarexit.include = ['*']
             tarexit(1)
         # MPI mode creates several copies of qcdir which are not needed.
         if mode == "mpi":
@@ -609,7 +630,7 @@ class QChem(object):
         for line in open(self.qcerr):
             if 'Unable to open a TCP socket for out-of-band communications' in line:
                 with open(self.qcerr, 'a') as f: print('TCP socket failure :(', file=f)
-                tarexit.include=['*']
+                tarexit.include = ['*']
                 tarexit(1)
         # Note that we do NOT copy qcdir to qcdsav here, because we don't know whether the calculation is good.
         # Delete the strange .btr files that show up on some clusters.
@@ -675,8 +696,8 @@ class QChem(object):
             # attempts.
             self.call_qchem()
             if all(["failed to converge" not in line and \
-                        "Convergence failure" not in line \
-                        for line in open(self.qcout)]): break
+                    "Convergence failure" not in line \
+                    for line in open(self.qcout)]): break
             attempt += 1
             if attempt > 6:
                 self.DIE("SCF convergence failure")
@@ -880,8 +901,8 @@ class QChem(object):
         self.M.xyzs = [M1.xyzs[-1]]
 
     def rpath(self, direction=1, tolerance=1000):
-        """ 
-        Q-Chem intrinsic reaction coordinate calculation. 
+        """
+        Q-Chem intrinsic reaction coordinate calculation.
 
         This calculation is by far the most difficult one to parse,
         and the return value is a dictionary that contains the IRC
@@ -890,7 +911,7 @@ class QChem(object):
         it.  It helps to use the QChemIRC() wrapper function to
         initialize this calculation from a converged transition state
         calculation.
-        
+
         Parameters
         ----------
         direction : int, optional
@@ -902,12 +923,12 @@ class QChem(object):
             Set the IRC displacement tolerance.  Higher values will lead to
             faster convergence but occasionally give a result that converges
             in 1-2 steps (i.e. "converged" but still at the transition state).
-        
+
         Returns
         -------
         IRCOut : OrderedDict
             IRC calculation results and status.  Entries in the dictionary are:
-            X = Time series of coordinates, starting at TS and going down to 
+            X = Time series of coordinates, starting at TS and going down to
             first minimum, then back to TS and going down to second minimum
             E = Energies, in the same order as X
             Q = Mulliken charges, in the same order as X
@@ -917,13 +938,13 @@ class QChem(object):
             MFwd = Status message of the forward IRC calculation
             MBak = Status message of the backward IRC calculation
             M = Molecule object containing initial frame (may be useful)
-            Status messages are: 
+            Status messages are:
             'IRC-Ok' = Best result, IRC converged to the minimum
             'Opt-Ok' = Good result, IRC failed and we picked up using a geometry optimization
             qcerr = Bad result, returns error message from failed Q-Chem calculation
 
         """
-        if direction not in [1, -1]: 
+        if direction not in [1, -1]:
             raise RuntimeError('direction must be +1 or -1')
         self.jobtype = 'rpath'
         # The maximum number of IRC cycles is set to 50.  In reality, each
@@ -957,7 +978,9 @@ class QChem(object):
         # Let's simply reconstruct our Molecule object instead.
         # Output data.
         M1 = self.load_qcout()
-        IRCOut = OrderedDict([('M', M1[0]), ('X', []), ('E', []), ('Q', []), ('Sz', []), ('LFwd', 0), ('LBak', 0), ('MFwd', 'No Result'), ('MBak', 'No Result')])
+        IRCOut = OrderedDict(
+            [('M', M1[0]), ('X', []), ('E', []), ('Q', []), ('Sz', []), ('LFwd', 0), ('LBak', 0), ('MFwd', 'No Result'),
+             ('MBak', 'No Result')])
         # Get the irrecoverable failures out of the way.
         if M1.Irc[0]['stat'] in [-1, 2]:
             IRCOut['MFwd'] = M1.qcerr
@@ -967,6 +990,7 @@ class QChem(object):
             for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M1.Irc[0][i]
             IRCOut['MFwd'] = 'IRC-Ok'
             IRCOut['LFwd'] += len(M1.Irc[0]['X'])
+
         # If we need to continue the geometry optimization, do so
         # and then append the output data to the IRC data structure.
         def append_opt(M_, RCDir, flip=False):
@@ -978,11 +1002,12 @@ class QChem(object):
             IRCOut['Q'] += M2.qm_mulliken_charges[1:]
             IRCOut['Sz'] += M2.qm_mulliken_spins[1:]
             if flip:
-                IRCOut['MBak' if RCDir==0 else 'MFwd'] = 'Opt-Ok'
-                IRCOut['LBak' if RCDir==0 else 'LFwd'] += len(M2)-1
+                IRCOut['MBak' if RCDir == 0 else 'MFwd'] = 'Opt-Ok'
+                IRCOut['LBak' if RCDir == 0 else 'LFwd'] += len(M2) - 1
             else:
-                IRCOut['MFwd' if RCDir==0 else 'MBak'] = 'Opt-Ok'
-                IRCOut['LFwd' if RCDir==0 else 'LBak'] += len(M2)-1
+                IRCOut['MFwd' if RCDir == 0 else 'MBak'] = 'Opt-Ok'
+                IRCOut['LFwd' if RCDir == 0 else 'LBak'] += len(M2) - 1
+
         if M1.Irc[0]['stat'] == 1: append_opt(M1, 0)
 
         # Reverse the IRC data so that it ends in the transition state.
@@ -991,7 +1016,7 @@ class QChem(object):
         if M1.Irc[1]['stat'] in [0, 1]:
             for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M1.Irc[1][i][1:]
             IRCOut['MBak'] = 'IRC-Ok'
-            IRCOut['LBak'] += len(M1.Irc[1]['X'])-1
+            IRCOut['LBak'] += len(M1.Irc[1]['X']) - 1
         # If we need to continue the geometry optimization, do so
         # and then append the output data to the IRC data structure.
         if M1.Irc[1]['stat'] == 1: append_opt(M1, 1)
@@ -1006,7 +1031,7 @@ class QChem(object):
             if os.path.exists("%s1" % self.qcdsav):
                 _exec("cp -r %s1 %s" % (self.qcdsav, self.qcdir), print_command=False)
             self.jobtype = 'rpath'
-            self.remextra = OrderedDict([('rpath_direction', -1*direction),
+            self.remextra = OrderedDict([('rpath_direction', -1 * direction),
                                          ('rpath_tol_displacement', tolerance),
                                          ('rpath_max_cycles', 50),
                                          ('geom_opt_max_cycles', 300)])
@@ -1019,17 +1044,19 @@ class QChem(object):
                 IRCOut['MBak'] = M3.qcerr
             if M3.Irc[0]['stat'] in [0, 1]:
                 for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M3.Irc[0][i][1:]
-                IRCOut['LBak'] += len(M3.Irc[0]['X'])-1
+                IRCOut['LBak'] += len(M3.Irc[0]['X']) - 1
                 IRCOut['MBak'] = 'IRC-Ok'
-            if M3.Irc[0]['stat'] == 1: 
+            if M3.Irc[0]['stat'] == 1:
                 append_opt(M3, 0, flip=True)
         return IRCOut
 
-def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=True, finalize=False, qcin='qcts.in', vout=None):
+
+def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=True, finalize=False, qcin='qcts.in',
+            vout=None):
     """
     Perform a series of calculations to obtain the transition state,
     starting from an initial guess.  The sequence of calculations are:
-    
+
     1) Stability analysis (if requested)
     2) Frequency calculation
     3) Transition state optimization
@@ -1056,7 +1083,7 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
         Do a final Hessian calculation at the conclusion of the calculation.
     qcin : str
         Base name for the Q-Chem calculations.
-    
+
     Returns
     -------
     QChem object containing transition state result.
@@ -1065,20 +1092,20 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
     if initial_stable:
         print("Initial HF/KS stability analysis.")
         QCTS.make_stable()
-        
-    #----
+
+    # ----
     # Perform the following until a KS-stable transition state is found:
     # 1) Run frequency calculation
     # 2) Run transition state calculation
     # 3) Run stability analysis calculation on TS
-    #----
+    # ----
     while True:
         print("Frequency calculation.")
         QCTS.freq()
         print("Transition state optimization.")
         QCTS.ts()
         # If we're not worrying about stability, then quit right now.
-        if not final_stable: 
+        if not final_stable:
             if finalize:
                 # Run frequency calculation to start off IRC!
                 print("Final frequency calculation.")
@@ -1100,6 +1127,7 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
             print("HF/KS unstable, redoing transition state.")
     return QCTS
 
+
 def ProcessIRC(IRCData, xyz0=None):
     """
     Save IRC data to an output .xyz file.
@@ -1118,6 +1146,7 @@ def ProcessIRC(IRCData, xyz0=None):
     E : np.ndarray
         IRC energies in kcal/mol referenced to initial frame
     """
+
     def GetRMSD(mol, frame, xtrial):
         """ Get the RMSD between mol[frame] and xtrial. """
         tmp = mol[frame]
@@ -1125,6 +1154,7 @@ def ProcessIRC(IRCData, xyz0=None):
         tmp.align()
         RMSD = np.sqrt(np.mean((tmp.xyzs[1] - tmp.xyzs[0]) ** 2))
         return RMSD
+
     # First get RMSD of IRC endpoints to the string endpoints.
     # Reverse the string if the sum of the RMSDs is smaller for the reversed string.
     if xyz0 != None:
@@ -1148,12 +1178,12 @@ def ProcessIRC(IRCData, xyz0=None):
     E_kc -= E[0]
     E_kc *= 627.51
     # The frame number of the transition state.
-    iTS = (IRCData['LFwd']-1 if fwd else IRCData['LBak'])
+    iTS = (IRCData['LFwd'] - 1 if fwd else IRCData['LBak'])
     # Write IRC energies to comments.
     M.comms = ["Energy = % 16.10f ; %+.4f kcal/mol" % (i, j) for i, j in zip(E, E_kc)]
     M.comms[iTS] += " (Transition State)"
     # Eliminate geometry optimization frames that go up in energy.
-    selct = np.concatenate((monotonic_decreasing(E, iTS, 0)[::-1], monotonic_decreasing(E, iTS, len(M)-1)[1:]))
+    selct = np.concatenate((monotonic_decreasing(E, iTS, 0)[::-1], monotonic_decreasing(E, iTS, len(M) - 1)[1:]))
     M = M[selct]
     E = E[selct]
     for i in range(len(M)):
@@ -1161,6 +1191,7 @@ def ProcessIRC(IRCData, xyz0=None):
     # Write structures and populations.
     M.align_center()
     return M, E
+
 
 def QChemIRC(xyz, charge, mult, method, basis, qcdir, qcin='qcirc.in', xyz0=None):
     """
@@ -1223,10 +1254,14 @@ def QChemIRC(xyz, charge, mult, method, basis, qcdir, qcin='qcirc.in', xyz0=None
         """
         Get the minimum number of IRC steps considered to be a valid calculation.
         """
-        if tol >= 1000: return 5
-        elif tol >= 100: return 7
-        elif tol >= 10: return 9
-        else: return 11
+        if tol >= 1000:
+            return 5
+        elif tol >= 100:
+            return 7
+        elif tol >= 10:
+            return 9
+        else:
+            return 11
 
     tol = 1000
     print("Intrinsic Reaction Coordinate (IRC) calculation.")
@@ -1239,7 +1274,7 @@ def QChemIRC(xyz, charge, mult, method, basis, qcdir, qcin='qcirc.in', xyz0=None
         if min(IRCOut['LFwd'], IRCOut['LBak']) < min_irc_steps(tol):
             tol //= 2
             print("IRC segments are too short - tightening the tolerance (%i)" % tol)
-            if tol < 10: 
+            if tol < 10:
                 for line in msg:
                     print(line)
                 print("\x1b[1;91mIRC Failure: Segments are too short\x1b[0m")
@@ -1250,6 +1285,7 @@ def QChemIRC(xyz, charge, mult, method, basis, qcdir, qcin='qcirc.in', xyz0=None
             break
     return ProcessIRC(IRCOut, xyz0)
 
+
 def SpaceIRC(M, E, RMSD=True):
     """
     Create a Molecule object with frames spaced by 0.05 Angstrom.
@@ -1258,14 +1294,14 @@ def SpaceIRC(M, E, RMSD=True):
 
     Parameters
     ----------
-    M : Molecule object 
+    M : Molecule object
         IRC coordinates
-    E : np.ndarray 
+    E : np.ndarray
         IRC energies
     RMSD : bool
-        Use RMSD for calculating arc length, 
+        Use RMSD for calculating arc length,
         otherwise use maximum displacement.
-    
+
     Returns
     -------
     M_EV : Molecule
@@ -1279,9 +1315,9 @@ def SpaceIRC(M, E, RMSD=True):
     ArcMol = arc(M, RMSD=RMSD)
     ArcMolCumul = np.insert(np.cumsum(ArcMol), 0, 0.0)
     # Create linearly interpolated coordinates and energies
-    dx = 0.05 
-    npts = int(max(ArcMolCumul)/dx)
-    if npts == 0: 
+    dx = 0.05
+    npts = int(max(ArcMolCumul) / dx)
+    if npts == 0:
         print("\x1b[91mFailure: Path length is < %f Angstrom\x1b[0m" % dx)
         tarexit()
     ArcMolEqual = np.linspace(0, max(ArcMolCumul), npts)
@@ -1289,16 +1325,18 @@ def SpaceIRC(M, E, RMSD=True):
     xyznew = np.zeros((npts, xyzold.shape[1], xyzold.shape[2]), dtype=float)
     for a in range(M.na):
         for i in range(3):
-            xyznew[:,a,i] = np.interp(ArcMolEqual, ArcMolCumul, xyzold[:, a, i])
+            xyznew[:, a, i] = np.interp(ArcMolEqual, ArcMolCumul, xyzold[:, a, i])
     # print E[0], E[-1], max(E)
     Enew = np.interp(ArcMolEqual, ArcMolCumul, E)
-    E_kc = 627.51*(Enew - Enew[0])
+    E_kc = 627.51 * (Enew - Enew[0])
     # print Enew[0], Enew[-1], max(Enew)
-    M_EV.comms = ["Frame %3i IRC: Energy = % 16.10f ; %+.4f kcal/mol" % (ii, i, j) for ii, (i, j) in enumerate(zip(Enew, E_kc))]
+    M_EV.comms = ["Frame %3i IRC: Energy = % 16.10f ; %+.4f kcal/mol" % (ii, i, j) for ii, (i, j) in
+                  enumerate(zip(Enew, E_kc))]
     # M_EV.comms = ["Intrinsic Reaction Coordinate: Energy = % .4f kcal/mol" % i for i in Enew]
     M_EV.comms[np.argmax(Enew)] += " (Transition State)"
     M_EV.xyzs = list(xyznew)
     return M_EV
+
 
 def SpaceIRC2(M, E, RMSD=True, pause=0, sweep=0, num=0):
     """
@@ -1308,14 +1346,14 @@ def SpaceIRC2(M, E, RMSD=True, pause=0, sweep=0, num=0):
 
     Parameters
     ----------
-    M : Molecule object 
+    M : Molecule object
         IRC coordinates
-    E : np.ndarray 
+    E : np.ndarray
         IRC energies
     RMSD : bool
-        Use RMSD for calculating arc length, 
+        Use RMSD for calculating arc length,
         otherwise use maximum displacement.
-    
+
     Returns
     -------
     M_EV : Molecule
@@ -1332,9 +1370,9 @@ def SpaceIRC2(M, E, RMSD=True, pause=0, sweep=0, num=0):
         ArcMol = arc(M_, RMSD=RMSD)
         ArcMolCumul = np.insert(np.cumsum(ArcMol), 0, 0.0)
         # Create linearly interpolated coordinates and energies
-        dx = 0.05 
-        npts = int(max(ArcMolCumul)/dx)
-        if npts == 0: 
+        dx = 0.05
+        npts = int(max(ArcMolCumul) / dx)
+        if npts == 0:
             print("\x1b[91mFailure: Path length is < %f Angstrom\x1b[0m" % dx)
             tarexit()
         ArcMolEqual = np.linspace(0, max(ArcMolCumul), npts)
@@ -1342,29 +1380,29 @@ def SpaceIRC2(M, E, RMSD=True, pause=0, sweep=0, num=0):
         xyznew = np.zeros((npts, xyzold.shape[1], xyzold.shape[2]), dtype=float)
         for a in range(M.na):
             for i in range(3):
-                xyznew[:,a,i] = np.interp(ArcMolEqual, ArcMolCumul, xyzold[:, a, i])
+                xyznew[:, a, i] = np.interp(ArcMolEqual, ArcMolCumul, xyzold[:, a, i])
         Enew = np.interp(ArcMolEqual, ArcMolCumul, E_)
-        E_kc = 627.51*(Enew - Emin)
+        E_kc = 627.51 * (Enew - Emin)
         M_EV.comms = ["Energy = % 16.10f ; %+.4f kcal/mol" % (i, j) for i, j in zip(Enew, E_kc)]
-        for i in range(1, len(M_EV)-1):
+        for i in range(1, len(M_EV) - 1):
             M_EV.comms[i] += " interpolated"
         M_EV.comms[np.argmax(Enew)] += " (Transition State)"
         M_EV.xyzs = list(xyznew)
         return M_EV
 
-    M1 = space_piece(M[:imax+1], E[:imax+1], E[0])[:-1]
+    M1 = space_piece(M[:imax + 1], E[:imax + 1], E[0])[:-1]
     M2 = space_piece(M[imax:], E[imax:], E[0])
     for i in range(len(M1)):
         M1.comms[i] = "Frame %3i IRC: " % i + M1.comms[i]
     for i in range(len(M2)):
-        M2.comms[i] = "Frame %3i IRC: " % (i+len(M1)) + M2.comms[i]
-    
+        M2.comms[i] = "Frame %3i IRC: " % (i + len(M1)) + M2.comms[i]
+
     for i in range(pause):
         M1 += M2[0]
 
     if len(M2) < sweep or len(M1) < sweep:
         print("Warning: Sweep is longer than one piece of the IRC")
-    vib = M2[:sweep/2+1] + M2[:sweep/2+1][::-1] + M1[-sweep/2:][::-1] + M1[-sweep/2:]
+    vib = M2[:sweep / 2 + 1] + M2[:sweep / 2 + 1][::-1] + M1[-sweep / 2:][::-1] + M1[-sweep / 2:]
     for i in range(num):
         M1 += vib
 
@@ -1374,4 +1412,3 @@ def SpaceIRC2(M, E, RMSD=True, pause=0, sweep=0, num=0):
     # M_EV.comms[np.argmax(Enew)] += " (Transition State)"
     # M_EV.xyzs = list(xyznew)
     # return M_EV
-

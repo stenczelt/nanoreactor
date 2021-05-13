@@ -1,52 +1,53 @@
 #!/usr/bin/env python
 
-#=========================================================================#
-#|                                                                       |#
-#|                  TeraChem Molecular Dynamics Script                   |#
-#|                                                                       |#
-#|             Author: Lee-Ping Wang (leeping@stanford.edu)              |#
-#|                                                                       |#
-#| - Allows a long MD job to run on a runtime restricted SGE queue       |#
-#|                                                                       |#
-#| - Keeps track of MD simulation chunks and creates an unbroken         |#
-#|   and non-overlapping trajectory                                      |#
-#|                                                                       |#
-#| - Script resubmits itself so that MD simulation runs continuously     |#
-#|                                                                       |#
-#| - Executes nanoreactor learning program alongside TeraChem MD         |#
-#|                                                                       |#
-#| - After job is done, scratch files on compute node are copied back.   |#
-#|                                                                       |#
-#|                             Instructions:                             |#
-#|                                                                       |#
-#| 1) Make sure directory doesn't contain a running job already          |#
-#|                                                                       |#
-#| 2) The directory should contain: start.xyz, start.in, restart.in      |#
-#|                                                                       |#
-#| In case a job needs to be manually restarted, delete this job and the |#
-#| self-submitted job from the queue.                                    |#
-#|                                                                       |#
-#| The .chunk file should be 1 higher than the highest chunk_xxxx folder |#
-#|                                                                       |#
-#=========================================================================#
+# =========================================================================#
+# |                                                                       |#
+# |                  TeraChem Molecular Dynamics Script                   |#
+# |                                                                       |#
+# |             Author: Lee-Ping Wang (leeping@stanford.edu)              |#
+# |                                                                       |#
+# | - Allows a long MD job to run on a runtime restricted SGE queue       |#
+# |                                                                       |#
+# | - Keeps track of MD simulation chunks and creates an unbroken         |#
+# |   and non-overlapping trajectory                                      |#
+# |                                                                       |#
+# | - Script resubmits itself so that MD simulation runs continuously     |#
+# |                                                                       |#
+# | - Executes nanoreactor learning program alongside TeraChem MD         |#
+# |                                                                       |#
+# | - After job is done, scratch files on compute node are copied back.   |#
+# |                                                                       |#
+# |                             Instructions:                             |#
+# |                                                                       |#
+# | 1) Make sure directory doesn't contain a running job already          |#
+# |                                                                       |#
+# | 2) The directory should contain: start.xyz, start.in, restart.in      |#
+# |                                                                       |#
+# | In case a job needs to be manually restarted, delete this job and the |#
+# | self-submitted job from the queue.                                    |#
+# |                                                                       |#
+# | The .chunk file should be 1 higher than the highest chunk_xxxx folder |#
+# |                                                                       |#
+# =========================================================================#
 
+import argparse
 import os
 import re
-import argparse
-from numpy.random import randint
 from collections import OrderedDict
 
-#==========================#
+# ==========================#
 #     Parse arguments.     #
-#==========================#
+# ==========================#
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpus', type=int, default=1, help='Specify the number of graphics processing units.')
-parser.add_argument('--auto', action='store_true', help='Use this argument of the job is automatically submitted.') 
+parser.add_argument('--auto', action='store_true', help='Use this argument of the job is automatically submitted.')
 parser.add_argument('--time', type=str, default="24:00:00", help='Specify a hh:mm:ss time limit for the job.')
 parser.add_argument('--name', type=str, default='default', help='Specify the name of the job being submitted.')
-parser.add_argument('--tera', type=str, default='/home/leeping/opt/terachem/current/bin/terachem', help='Specify absolute path of TeraChem executable.')
-parser.add_argument('--hold', type=int, default=0, help='Specify the job number used to hold the submitted job (not necessary if submitting by hand).')
+parser.add_argument('--tera', type=str, default='/home/leeping/opt/terachem/current/bin/terachem',
+                    help='Specify absolute path of TeraChem executable.')
+parser.add_argument('--hold', type=int, default=0,
+                    help='Specify the job number used to hold the submitted job (not necessary if submitting by hand).')
 
 print("\n#=========================================#")
 print("#     Nanoreactor MD launching script     #")
@@ -54,6 +55,7 @@ print("#  Use the -h argument for detailed help  #")
 print("#=========================================#\n")
 
 args = parser.parse_args()
+
 
 def edit_tcin(fin=None, fout=None, options={}, defaults={}):
     """
@@ -69,7 +71,7 @@ def edit_tcin(fin=None, fout=None, options={}, defaults={}):
         Dictionary of options to overrule TeraChem input file. Pass None as value to delete a key.
     defaults : dict, optional
         Dictionary of options to add to the end
-    
+
     Returns
     -------
     dictionary
@@ -117,11 +119,11 @@ def edit_tcin(fin=None, fout=None, options={}, defaults={}):
                     uncomm = line.split("#", 1)[0].strip()
                     # Don't keep anything past the 'end' keyword
                     if uncomm.lower() == 'end': break
-                    if len(uncomm) > 0: 
+                    if len(uncomm) > 0:
                         haveKey = True
-                        comm = line.split("#", 1)[1].replace('\n','') if len(line.split("#", 1)) == 2 else ''
+                        comm = line.split("#", 1)[1].replace('\n', '') if len(line.split("#", 1)) == 2 else ''
                         s = line.split(' ', 1)
-                        w = re.findall('[ ]+',uncomm)[0]
+                        w = re.findall('[ ]+', uncomm)[0]
                         k = s[0].lower()
                         if k in Answer:
                             line_out = k + w + str(Answer[k]) + comm
@@ -136,16 +138,17 @@ def edit_tcin(fin=None, fout=None, options={}, defaults={}):
                     print("%-15s %s" % (k, str(v)), file=f)
     return Answer
 
-#==========================#
+
+# ==========================#
 #  Determine chunk number  #
 #   and other arguments.   #
-#==========================#
+# ==========================#
 chunk = 0
 if os.path.exists('.chunk'):
     chunk = float(open('.chunk').readlines()[0].strip())
 
 dnm = "chunk_%04i" % chunk
-prevd = "chunk_%04i" % (chunk-1)
+prevd = "chunk_%04i" % (chunk - 1)
 cwd = os.getcwd()
 if args.name == 'default':
     if os.path.exists('.jobname'):
@@ -163,7 +166,7 @@ else:
 #     queue="gpuq"
 #     hrt="36:00:00"
 
-hold=""
+hold = ""
 if args.hold > 0:
     hold = "#SBATCH -d afterany:%i\n" % args.hold
 
@@ -183,28 +186,29 @@ if args.hold > 0:
 # else:
 #     interval = args.rsync
 
-#===========================#
+# ===========================#
 #   Check if files exist:   #
 #  start.xyz, (re)start.in  #
-#===========================#
+# ===========================#
 fnm = 'start.xyz'
 if not os.path.exists(fnm):
     raise Exception('The %s file does not exist!' % fnm)
 
 if os.path.exists(dnm):
-    if not os.path.exists(os.path.join(dnm,'run.out')) and not os.path.exists(os.path.join(dnm,'scr','coors.xyz')):
+    if not os.path.exists(os.path.join(dnm, 'run.out')) and not os.path.exists(os.path.join(dnm, 'scr', 'coors.xyz')):
         print("The directory pointed to by the .chunk file exists but contains no data - ok.")
     else:
-        raise Exception("The directory pointed to by the .chunk file exists and contains data - script will not continue.")
+        raise Exception(
+            "The directory pointed to by the .chunk file exists and contains data - script will not continue.")
 else:
     os.makedirs(dnm)
 if chunk > 0 and not os.path.exists(prevd):
     raise Exception("The directory containing the previous chunk (%s) doesn't exist!" % prevd)
 
-#===========================#
+# ===========================#
 #  Create copy of TeraChem  #
 #   input file with #gpus   #
-#===========================#
+# ===========================#
 
 fnm = "guess.in"
 makeGuess = False
@@ -220,9 +224,9 @@ if not os.path.exists(fnm):
 
 tcin = edit_tcin(fin=fnm)
 tcin['gpus'] = args.gpus
-if tcin.get('coordinates','none') != 'start.xyz':
+if tcin.get('coordinates', 'none') != 'start.xyz':
     raise Exception('TeraChem input file must have coordinates start.xyz')
-if chunk > 0: 
+if chunk > 0:
     tcin['restartmd'] = 'restart.md'
     if 'guess' in tcin: del tcin['guess']
 else:
@@ -237,11 +241,11 @@ edit_tcin(fin=fnm, fout=os.path.join(dnm, 'run.in'), options=tcin)
 
 os.system('cp start.xyz %s' % dnm)
 
-#============================#
+# ============================#
 #  Create copy of fixed_atom #
 #    and surface.xyz files   #
 #     in chunk directory     #
-#============================#
+# ============================#
 
 # LPW: Enable this functionality later
 
@@ -259,7 +263,7 @@ os.system('cp start.xyz %s' % dnm)
 
 os.chdir(dnm)
 
-fout="""\
+fout = """\
 #!/bin/bash -l
 #SBATCH -J {jobname}
 #SBATCH -p gpu
@@ -414,8 +418,10 @@ scancel $submitted_job
 # rsync -auvz $SGE_O_TEMPDIR/scr/ $SGE_O_WORKDIR/scr/
 """
 
-terapath=os.path.dirname(os.path.dirname(args.tera))
+terapath = os.path.dirname(os.path.dirname(args.tera))
 
 print(cwd)
-with open('sbatch.sh','w') as f: print(fout.format(jobname=jobname, cwd=cwd, hold=hold, scriptname=__file__, time=args.time, gpus=args.gpus, mem=args.gpus*8000, terapath=terapath, tera=args.tera), file=f)
+with open('sbatch.sh', 'w') as f: print(
+    fout.format(jobname=jobname, cwd=cwd, hold=hold, scriptname=__file__, time=args.time, gpus=args.gpus,
+                mem=args.gpus * 8000, terapath=terapath, tera=args.tera), file=f)
 os.system('sbatch sbatch.sh | tee .submit.txt')
