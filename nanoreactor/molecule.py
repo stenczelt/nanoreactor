@@ -9,14 +9,14 @@ import sysconfig
 from collections import Counter, OrderedDict, namedtuple
 from ctypes import *
 from datetime import date
+# For Python 3 compatibility
+from itertools import zip_longest as zip_longest
 
+import ase.io
 import numpy as np
 from numpy import arccos, cos, sin
 from numpy.linalg import multi_dot
 from pkg_resources import parse_version
-
-# For Python 3 compatibility
-from itertools import zip_longest as zip_longest
 
 
 # Special error which is thrown when TINKER .arc data is detected in a .xyz file
@@ -941,36 +941,7 @@ def extract_pop(M, verbose=True):
         Representative integer spin-z of this Molecule (one unpaired electron: sz=1), or -999 if inconsistent
 
     """
-
-    # Read in the charge and spin on the whole system.
-    srch = lambda s: np.array(
-        [float(re.search(r'(?<=%s )[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?' % s, c).group(0)) for c in M.comms if
-         all([i in c for i in ('charge', 'sz')])])
-    Chgs = srch('charge')  # An array of the net charge.
-    SpnZs = srch('sz')  # An array of the net Z-spin.
-    Spn2s = srch(r'sz\^2')  # An array of the sum of sz^2 by atom.
-
-    chg, chgpass = extract_int(Chgs, 0.3, 1.0, label="charge")
-    spn, spnpass = extract_int(abs(SpnZs), 0.3, 1.0, label="spin-z")
-
-    # Try to calculate the correct spin.
-    nproton = sum([Elements.index(i) for i in M.elem])
-    nelectron = nproton + chg
-    if not spnpass:
-        if verbose: logger.info("Going with the minimum spin consistent with charge.")
-        if nelectron % 2 == 0:
-            spn = 0
-        else:
-            spn = 1
-
-    # The number of electrons should be odd iff the spin is odd.
-    if (int((nelectron - spn) / 2)) * 2 != (nelectron - spn):
-        if verbose: logger.info(
-            "\x1b[91mThe number of electrons (%i) is inconsistent with the spin-z (%i)\x1b[0m" % (nelectron, spn))
-        return -999, -999
-
-    if verbose: logger.info("%i electrons; charge %i, spin %i" % (nelectron, chg, spn))
-    return chg, spn
+    return 0, 0
 
 
 def arc(Mol, begin=None, end=None, RMSD=True, align=True):
@@ -2011,10 +1982,20 @@ class Molecule(object):
         return QS
 
     def load_popxyz(self, fnm):
-        """ Given a charge-spin xyz file, load the charges (x-coordinate) and spins (y-coordinate) into internal arrays. """
-        QS = Molecule(fnm, ftype='xyz', build_topology=False)
-        self.qm_mulliken_charges = list(np.array(QS.xyzs)[:, :, 0])
-        self.qm_mulliken_spins = list(np.array(QS.xyzs)[:, :, 1])
+        """ Given a charge-spin xyz file, load the charges (x-coordinate)
+        and spins (y-coordinate) into internal arrays.
+
+        This is hacked in now, will read form ASE <- TKS32
+
+        """
+        # this was the original one, which is not needed for my force fields
+        # QS = Molecule(fnm, ftype='xyz', build_topology=False)
+        # self.qm_mulliken_charges = list(np.array(QS.xyzs)[:, :, 0])
+        # self.qm_mulliken_spins = list(np.array(QS.xyzs)[:, :, 1])
+
+        # use zeros, we don't actually use this here
+        self.qm_mulliken_charges = np.zeros(shape=(len(self.xyzs), len(self.Data["elem"])))
+        self.qm_mulliken_spins = np.zeros(shape=(len(self.xyzs), len(self.Data["elem"])))
 
     def align(self, smooth=False, center=True, center_mass=False, atom_select=None):
         """ Align molecules.
@@ -2987,10 +2968,45 @@ class Molecule(object):
 
     def read_xyz(self, fnm, **kwargs):
         """ .xyz files can be TINKER formatted which is why we have the try/except here. """
-        try:
-            return self.read_xyz0(fnm, **kwargs)
-        except ActuallyArcError:
-            return self.read_arc(fnm, **kwargs)
+
+        # try:
+        #     return self.read_xyz0(fnm, **kwargs)
+        # except ActuallyArcError:
+        #     return self.read_arc(fnm, **kwargs)
+
+        return self.read_ase(fnm, **kwargs)
+
+    @staticmethod
+    def read_ase(filename, **kwargs):
+        """ASE reader wrapper
+
+        The other readers work as follows:
+        - assume that the chemical elements are the same in all frames
+        - answer["elem"] is chemical symbols
+        - answer["xyzs"] is list of coordinate arrays
+        - answer["comms"] is the comment line, which is funny for ASE, I am skipping it for now
+
+        Parameters
+        ----------
+        filename : str
+        kwargs
+
+        Returns
+        -------
+
+        """
+        # make sure to overwrite index
+        kwargs.pop("index", None)
+
+        frames = ase.io.read(filename, index=":")
+
+        answer = dict(
+            elem=frames[0].get_chemical_symbols(),
+            xyzs=[at.get_positions() for at in frames],
+            comms=["charge +0.000 sz +0.000 sz^2 0.000"] * len(frames)
+        )
+
+        return answer
 
     def read_xyz0(self, fnm, **kwargs):
         """ Parse a .xyz file which contains several xyz coordinates, and return their elements.
