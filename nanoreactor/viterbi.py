@@ -275,11 +275,11 @@ if __name__ == '__main__':
     print(signal)
 
     t1 = time.time()
-    print(('c  ', viterbi(signal, metastability=0.99, p_correct=0.9)))
+    print('c  ', viterbi(signal, metastability=0.99, p_correct=0.9))
     t2 = time.time()
-    print(('py ', _viterbi(signal, metastability=0.99, p_correct=0.9)))
+    print('py ', _viterbi(signal, metastability=0.99, p_correct=0.9))
     t3 = time.time()
-    print(('skl', viterbi_skl(signal, metastability=0.99, p_correct=0.9)))
+    print('skl', viterbi_skl(signal, metastability=0.99, p_correct=0.9))
     t4 = time.time()
 
-    print((t4 - t3, t3 - t2, t2 - t1))
+    print(t4 - t3, t3 - t2, t2 - t1)

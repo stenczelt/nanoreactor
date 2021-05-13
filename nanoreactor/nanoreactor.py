@@ -86,7 +86,7 @@ def element(e, elem):
     end = 0
     for i in e:
         end += i[0]
-        if elem >= begin and elem < end:
+        if begin <= elem < end:
             return i[1]
         begin = end
 
@@ -236,35 +236,36 @@ class MyG(nx.Graph):
         return nx.is_isomorphic(self, other, node_match=nodematch)
 
     def __hash__(self):
-        ''' The hash function is something we can use to discard two things that are obviously not equal.  Here we neglect the hash. '''
+        """ The hash function is something we can use to discard two things that are obviously not equal.
+        Here we neglect the hash. """
         return 1
 
     def L(self):
-        ''' Return a list of the sorted atom numbers in this graph. '''
+        """ Return a list of the sorted atom numbers in this graph. """
         return sorted(self.nodes())
 
     def AStr(self):
-        ''' Return a string of atoms, which serves as a rudimentary 'fingerprint' : '99,100,103,151' . '''
+        """ Return a string of atoms, which serves as a rudimentary 'fingerprint' : '99,100,103,151' . """
         return commadash(self.L())
 
     def e(self):
-        ''' Return an array of the elements.  For instance ['H' 'C' 'C' 'H']. '''
+        """ Return an array of the elements.  For instance ['H' 'C' 'C' 'H']. """
         elems = nx.get_node_attributes(self, 'e')
         return [elems[i] for i in self.L()]
 
     def ef(self):
-        ''' Create an Empirical Formula '''
+        """ Create an Empirical Formula """
         Formula = list(self.e())
         return ''.join(
             [('%s%i' % (k, Formula.count(k)) if Formula.count(k) > 1 else '%s' % k) for k in sorted(set(Formula))])
 
     def x(self):
-        ''' Get a list of the coordinates. '''
+        """ Get a list of the coordinates. """
         coors = nx.get_node_attributes(self, 'x')
         return np.array([coors[i] for i in self.L()])
 
     def writexyz(self, fnm, center=False):
-        ''' Return a list of strings corresponding to an XYZ file. '''
+        """ Return a list of strings corresponding to an XYZ file. """
         out = []
         na = len(self.e())
         out.append("%5i" % na)
@@ -279,7 +280,7 @@ class MyG(nx.Graph):
             f.writelines([i + '\n' for i in out])
 
     def make_whole(self, a, b, c):
-        ''' Make the molecule whole in a rectilinear box '''
+        """ Make the molecule whole in a rectilinear box """
         # x = nx.get_node_attributes(self,'x')
         # print(x)
         x = self.x().copy()
@@ -491,25 +492,32 @@ class Nanoreactor(Molecule):
                  padtime=0, save_molecules=False, frames=0, saverxn=True,
                  neutralize=False, radii=[], align=False, pbc=0.0, plot=False):
         # ==========================#
-        #         Settings         #
+        #         Settings          #
         # ==========================#
         # Enhancement factor for determining whether two atoms are bonded
         self.Fac = enhance
+
         # Switch for whether to save molecules to disk.
         self.save_molecules = save_molecules
+
         # Switch for printing make-movie.tcl ; this is not necessary and may be deprecated soon
         self.Render = False
+
         # Known molecules to be excluded from coloring (by empirical formula)
         # Note: Isomers formed later are still considered interesting.  This is a hack.
         self.KnownFormulas = set(known)
+
         # Exclude certain molecules from being counted in any reaction event
         self.ExcludedFormulas = set(exclude)
-        if printlvl >= 1 and len(self.ExcludedFormulas) > 0: print(self.ExcludedFormulas,
-                                                                   "is excluded from being part of any reaction")
+        if printlvl >= 1 and len(self.ExcludedFormulas) > 0:
+            print(self.ExcludedFormulas, "is excluded from being part of any reaction")
+
         # The print level (control the amount of printout)
         self.printlvl = printlvl
+
         # List of favorite colors for VMD coloring (excluding reds)
         self.CoolColors = [23, 32, 11, 19, 3, 13, 15, 27, 22, 6, 4, 12, 7, 9, 10, 28, 17, 21, 26, 24, 18]
+
         # Molecules that live for at least this long will be colored in VMD.
         # Also, molecules that vanish for (less than) this amount of time will have their time series filled in.
         self.LearnTime = learntime
@@ -517,19 +525,23 @@ class Nanoreactor(Molecule):
             self.PadTime = padtime
         else:
             self.PadTime = self.LearnTime
+
         # Whether to extract molecules to neutralize the system
         self.neutralize = neutralize
+
         # Bond order threshold
         self.boThre = bothre
+
         # Keep time series that come within this factor of the threshold
         self.sparsePad = 1.2
+
         # Whether to align molecules / reactions prior to output
         self.align = align
 
         # ==========================#
         #   Load in the XYZ file   #
         # ==========================#
-        if xyzin == None:
+        if xyzin is None:
             raise Exception('Nanoreactor must be initialized with an .xyz file as the first argument')
         self.timing(super(Nanoreactor, self).__init__, "Loading molecule", xyzin)
         # Rudimentary periodic boundary condition support; cubic box only.
@@ -541,7 +553,7 @@ class Nanoreactor(Molecule):
         # ===============================#
         #   Load charge and spin data   #
         # ===============================#
-        if qsin != None and os.path.exists(qsin):
+        if qsin is not None and os.path.exists(qsin):
             QS = self.timing(Molecule, "Loading charge and spin populations", qsin, ftype="xyz")
             QSarr = np.array(QS.xyzs)
             self.Charges = QSarr[:, :, 0]
@@ -556,7 +568,7 @@ class Nanoreactor(Molecule):
         #   Load bond order data   #
         # ==========================#
         self.boHave = False
-        if boin != None and os.path.exists(boin) and bothre > 0.0:
+        if boin is not None and os.path.exists(boin) and bothre > 0.0:
             self.boHave = True
             self.boSparse = self.timing(load_bondorder, "Loading pairwise bond orders", boin, bothre / self.sparsePad,
                                         len(self))
@@ -581,7 +593,8 @@ class Nanoreactor(Molecule):
         self.PadTime = int(self.PadTime / self.dt_fs)
         self.freqCutoff = cutoff
 
-        if self.printlvl >= 0: print("Done loading files")
+        if self.printlvl >= 0:
+            print("Done loading files")
         print("The simulation timestep is %.1f fs" % self.dt_fs)
         print("Identification time for molecules is %.1f fs" % self.LearnTime)
         if self.freqCutoff == 0.0:
@@ -595,8 +608,10 @@ class Nanoreactor(Molecule):
         # ==========================#
         # An iterator over all atom pairs, for example: [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
         self.AtomIterator = np.array(list(itertools.combinations(list(range(self.na)), 2)))
+
         # Set of isomers that are RECORDED.
         self.Recorded = set()
+
         # A time-series of atom-wise isomer labels.
         self.IsoLabels = []
         if self.boHave:
@@ -614,13 +629,17 @@ class Nanoreactor(Molecule):
                                                      self.sparsePad, mindist)
             self.dxFiltered = self.timing(self.tsFilter, "Filtering distance time series", self.dxSparse, self.dxThre,
                                           self.freqCutoff, 'dx', 'plot_dx.pdf' if plot else None)
-        # self.global_graphs : A list of all possible ways the atoms are connected in the whole system, consisting of a list of 2-tuples.
+
+        # self.global_graphs : A list of all possible ways the atoms are connected in the whole system,
+        #                      consisting of a list of 2-tuples.
         # self.gg_frames : An OrderedDict that maps start_time : (index in self.global_graphs, end_time)
         # self.BondLists : A time series of VMD-formatted bond specifications for each frame in the trajectory.
-        self.global_graphs, self.gg_frames, self.BondLists = self.timing(self.makeGlobalGraphs, "Making global graphs",
-                                                                         self.boFiltered if self.boHave else self.dxFiltered,
-                                                                         self.boThre if self.boHave else self.dxThre,
-                                                                         'bo' if self.boHave else 'dx')
+        self.global_graphs, self.gg_frames, self.BondLists = self.timing(
+            self.makeGlobalGraphs, "Making global graphs",
+            self.boFiltered if self.boHave else self.dxFiltered,
+            self.boThre if self.boHave else self.dxThre,
+            'bo' if self.boHave else 'dx')
+
         # ========================#
         # | Make molecule graphs #|
         # ========================#
@@ -632,8 +651,10 @@ class Nanoreactor(Molecule):
         # self.TimeSeries : Ordered dictionary that maps molecule ID to time series data for that molecule.
         # self.traj_iidx : Array that maps (frame, atom) to the isomer index of that atom
         # self.traj_midx : Array that maps (frame, atom) to the molecule index of that atom
-        # self.traj_stable : Array that maps (frame, atom) to whether the molecule containing this atom is currently stable
-        # self.known_iidx : List of isomers that are 'known', i.e. matching user-provided empirical formulas and excluded from coloring
+        # self.traj_stable : Array that maps (frame, atom) to whether the molecule containing this atom
+        #                    is currently stable
+        # self.known_iidx : List of isomers that are 'known', i.e. matching user-provided empirical formulas
+        #                   and excluded from coloring
         self.Isomers, self.MolIDs, self.TimeSeries, self.traj_iidx, self.traj_midx, self.traj_stable, self.known_iidx = self.timing(
             self.makeMoleculeGraphs, "Making molecule graphs")
         if hasattr(self, 'boxes'): self.timing(self.makeWhole, "Making molecules whole")
@@ -1439,7 +1460,8 @@ class Nanoreactor(Molecule):
             atoms = np.array(ts['graph'].L())
             for fstart, intvl in list(ts['stable_times'].items()):
                 fend = fstart + intvl - 1
-                if self.printlvl >= 2: print("Start Intvl End", fstart, intvl, fend)
+                if self.printlvl >= 2:
+                    print("Start Intvl End", fstart, intvl, fend)
                 if fstart > 0:
                     # Look for reaction event that led to formation of this molecule
                     rstart, rend, ratoms = self.completeEvent(fstart, atoms, -1)
@@ -1678,7 +1700,8 @@ class Nanoreactor(Molecule):
                 output_iidx.append((r_iidx, p_iidx))
 
         odir = 'reactions'
-        if not os.path.exists(odir): os.makedirs(odir)
+        if not os.path.exists(odir):
+            os.makedirs(odir)
         # This is a double loop, first over the unique reactant/product isomer indices,
         # then over all of the reaction events that match these isomer indices.
         for iout in range(len(output_iidx)):
@@ -1950,6 +1973,8 @@ mol modstyle %i 0 VDW 0.150000 27.000000
         self.writeColors()
         self.writeReactionEvents()
         # self.GetReactions()
-        with open('bonds.dat', 'w') as bondtab: bondtab.write('\n'.join(self.BondLists) + '\n')
+        with open('bonds.dat', 'w') as bondtab:
+            bondtab.write('\n'.join(self.BondLists) + '\n')
         self.WriteChargeSpinLabels()
-        if hasattr(self, 'boxes'): self.write('whole.xyz')
+        if hasattr(self, 'boxes'):
+            self.write('whole.xyz')

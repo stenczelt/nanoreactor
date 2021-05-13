@@ -90,7 +90,7 @@ def QCOptIC(*args, **kwargs):
     if len(OptOut.qcerr) == 0 or OptOut.qcerr == 'Maximum optimization cycles reached':
         return OptOut
     else:
-        print(("Geometry optimization failed! (%s)" % OptOut.qcerr))
+        print("Geometry optimization failed! (%s)" % OptOut.qcerr)
         tarexit()
 
 
@@ -177,10 +177,10 @@ def main():
         SumFrags.append(M[0])
     for fragment in SumFrags: fragment.write('fragmentopt.xyz', append=True)
     if subefstart != subeffinal: print("Fragments changed during optimization, calculation invalid")
-    print(("Final electronic energy (Ha) of optimized frags: % 18.10f" % FragE))
-    print(("Final ZPE (kcal/mol) of optimized frags: % 18.10f" % FragZPE))
-    print(("Final entropy (cal/mol.K) of optimized frags: % 18.10f" % FragEntr))
-    print(("Final enthalpy (kcal/mol) of optimized frags: % 18.10f" % FragEnth))
+    print("Final electronic energy (Ha) of optimized frags: % 18.10f" % FragE)
+    print("Final ZPE (kcal/mol) of optimized frags: % 18.10f" % FragZPE)
+    print("Final entropy (cal/mol.K) of optimized frags: % 18.10f" % FragEntr)
+    print("Final enthalpy (kcal/mol) of optimized frags: % 18.10f" % FragEnth)
     nrg = open('fragmentopt.nrg', 'w')
     for subef in subeffinal: nrg.write(subef + " ")
     nrg.write("\nTotal electronic energy: %f Ha\n" % FragE)

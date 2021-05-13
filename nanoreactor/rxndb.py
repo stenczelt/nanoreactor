@@ -1509,12 +1509,14 @@ class Pathway(Calculation):
                 for calc in list(self.Optimizations.values()):
                     calc.launch()
                 return
+
             if (len(self.Optimizations) == 2) and all(
                     [calc.status == 'converged' for calc in list(self.Optimizations.values())]):
                 OptMols = OrderedDict()
                 for frm, calc in list(self.Optimizations.items()):
                     OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize.xyz'), topframe=-1)
                     OptMols[frm].load_popxyz(os.path.join(calc.home, 'optimize.pop'))
+
                 # Catch the *specific case* that after reoptimizing the
                 # endpoints, the molecules became the same again.
                 if self.Equal(OptMols[0], OptMols[1]):
@@ -1522,6 +1524,7 @@ class Pathway(Calculation):
                                 printlvl=2)
                     self.saveStatus('no-reaction')
                     return
+
                 # If the initial and final molecules are different, we
                 # include them all in the pathway without rechecking topology.
                 Joined = (OptMols[0][::-1].without('qm_mulliken_charges', 'qm_mulliken_spins') + self.M0 +
@@ -1817,7 +1820,8 @@ class Trajectory(Calculation):
         # Note that topology is determined by the final frame
         OptMols = OrderedDict()
         for frm, calc in list(self.Optimizations.items()):
-            if calc.status == 'failed': continue
+            if calc.status == 'failed':
+                continue
             OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize.xyz'), topframe=-1)
             OptMols[frm].load_popxyz(os.path.join(calc.home, 'optimize.pop'))
             self.synchronizeChargeMult(OptMols[frm])

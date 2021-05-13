@@ -363,10 +363,8 @@ def make_obmol(M, prefix):
     qmbo = M.qm_bondorder
     for b in M.bonds:
         # The determine bond order by length and put it in.
-        bol = \
-            BondStrengthByLength(M.elem[b[0]], M.elem[b[1]], np.linalg.norm(M.xyzs[0][b[0]] - M.xyzs[0][b[1]]),
-                                 artol=0.33)[
-                1]
+        bol = BondStrengthByLength(
+            M.elem[b[0]], M.elem[b[1]], np.linalg.norm(M.xyzs[0][b[0]] - M.xyzs[0][b[1]]), artol=0.33)[1]
         boq = max(1, (qmbo[b[0], b[1]] if qmbo[b[0], b[1]] != 0.0 else bol))
         # "5" stands for an aromatic bond.
         if bol == 1.5 and round(boq * 2) / 2 == 1.5:

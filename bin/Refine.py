@@ -115,7 +115,8 @@ def main():
     # global WQ
     # Get command line arguments.
     args = parse_command()
-    if args.draw == 3: args.fast_restart = False
+    if args.draw == 3:
+        args.fast_restart = False
     # Set verbosity level
     logger.set_verbosity(args.verbose)
     # Create the Work Queue.
