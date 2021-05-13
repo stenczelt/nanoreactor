@@ -1,4 +1,5 @@
-""" Calculate the pairwise Morse potential between all pairs of atoms in a frame.  Used as an energy function to prevent atom clashes. """
+""" Calculate the pairwise Morse potential between all pairs of atoms in a frame.
+Used as an energy function to prevent atom clashes. """
 
 from collections import OrderedDict, namedtuple
 
@@ -101,10 +102,10 @@ BondEnergyRadii = OrderedDict(
 # S=S 425 149
 # Se=Se 272 215
 
-## UFF Parameters
-## Energy units are in Hartree
-## Angles are in radians
-## Parameter names:
+# UFF Parameters
+# Energy units are in Hartree
+# Angles are in radians
+# Parameter names:
 # r    = (Bohr) Bond Radius
 # th0  = Equil. Angle in Radian
 # x    = (Bohr) VdW Distance
@@ -408,20 +409,20 @@ UFFSymbols = OrderedDict([(j, ['h_', 'he',
                                'bk6+3', 'cf6+3', 'es6+3', 'fm6+3', 'md6+3', 'no6+3', 'lr6+3'][i]) for i, j in
                           list(enumerate(AtomicMass.keys()))[:103]])
 
-## The following is taken from my old calc-uff-parms.py
-## It is intended to give us the force constants for bonds.
+# The following is taken from my old calc-uff-parms.py
+# It is intended to give us the force constants for bonds.
 auangs = 0.529177
 aukcal = 627.5096
 auev = 27.2114
 l = 0.1332
 b = 664.12
 
-## UFF parameters named tuple.
+# UFF parameters named tuple.
 UFFP = namedtuple('UFFP', ['r', 'th0', 'x', 'd', 'zeta', 'z', 'vsp3', 'vsp2', 'chi', 'J', 'rqeq', 'qmin', 'qmax'])
 
-## Build a dictionary of elements to UFF parameters.
-## In cases where multiple UFF parameters exist for an element,
-## I went for the highest coordination.
+# Build a dictionary of elements to UFF parameters.
+# In cases where multiple UFF parameters exist for an element,
+# I went for the highest coordination.
 UFFElements = OrderedDict()
 for s in UFFSymbols:
     d = UFFParams[UFFSymbols[s]]

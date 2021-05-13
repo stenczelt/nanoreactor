@@ -1123,15 +1123,16 @@ class Nanoreactor(Molecule):
             atoms = np.array(ts['graph'].L())
             for intvl, on_off in encode(ts['raw_signal']):
                 if on_off:
-                    if (traj_midx[frame:frame + intvl, atoms] != -1).any(): raise RuntimeError(
-                        'traj_midx is twice assigned')
+                    if (traj_midx[frame:frame + intvl, atoms] != -1).any():
+                        raise RuntimeError('traj_midx is twice assigned')
                     traj_midx[frame:frame + intvl, atoms] = ts['midx']
                     traj_iidx[frame:frame + intvl, atoms] = ts['iidx']
                     if intvl > self.LearnTime:
                         ts['stable_times'][frame] = intvl
                         traj_stable[frame:frame + intvl, atoms] = 1
                 frame += intvl
-        if (traj_midx == -1).any(): raise RuntimeError('traj_midx is not fully assigned')
+        if (traj_midx == -1).any():
+            raise RuntimeError('traj_midx is not fully assigned')
 
         if self.printlvl >= 2:
             for molID in TimeSeries:
@@ -1146,7 +1147,8 @@ class Nanoreactor(Molecule):
         return Isomers, MolIDs, TimeSeries, traj_iidx, traj_midx, traj_stable, known_iidx
 
     def makeWhole(self):
-        if not hasattr(self, 'boxes'): return
+        if not hasattr(self, 'boxes'):
+            return
         for molID, ts in list(self.TimeSeries.items()):
             frame = 0
             G = ts['graph']
@@ -1321,14 +1323,16 @@ class Nanoreactor(Molecule):
         # Scan back in time until the "molecules of these atoms" are no longer stable
         # or the molecule indices have changed.
         for minPad in range(self.PadTime + 1):
-            if rxMin - minPad == 0: break
+            if rxMin - minPad == 0:
+                break
             if not self.traj_stable[rxMin - minPad, atoms].all() or set(
                     self.traj_midx[rxMin - minPad, atoms]) != midxMin:
                 minPad -= 1
                 break
         # Scan forward in time, as above
         for maxPad in range(self.PadTime + 1):
-            if rxMax + maxPad == 0: break
+            if rxMax + maxPad == 0:
+                break
             if not self.traj_stable[rxMax + maxPad, atoms].all() or set(
                     self.traj_midx[rxMax + maxPad, atoms]) != midxMax:
                 maxPad -= 1
@@ -1377,16 +1381,19 @@ class Nanoreactor(Molecule):
             (If not a valid reaction event, None will be returned)
         """
         if frame1 == 0:
-            if self.printlvl >= 2: print("Scanned past start")
+            if self.printlvl >= 2:
+                print("Scanned past start")
             return None, None
         if frame2 == len(self) - 1:
-            if self.printlvl >= 2: print("Scanned past end")
+            if self.printlvl >= 2:
+                print("Scanned past end")
             return None, None
         molid1 = self.getMolIDs(frame1, atoms)
         molid2 = self.getMolIDs(frame2, atoms)
         common = set(molid1).intersection(set(molid2))
         if len(common) > 0:
-            if self.printlvl >= 2: print("** Common molIDs: **", sorted(list(common)))
+            if self.printlvl >= 2:
+                print("** Common molIDs: **", sorted(list(common)))
         # Remove spectator molecules from the reaction event. This makes an assumption that
         # we are ignoring molecules that "catalyze" the reaction. On the other hand,
         # this method isn't guaranteed to find all molecules that catalyze the reaction,
@@ -1394,13 +1401,15 @@ class Nanoreactor(Molecule):
         molid1 = [m for m in molid1 if m not in common]
         molid2 = [m for m in molid2 if m not in common]
         if len(molid1) == 0:
-            if self.printlvl >= 2: print("No molecules left after removing spectators")
+            if self.printlvl >= 2:
+                print("No molecules left after removing spectators")
             return None, None
         # Check if any of the molecules are included in the excluded formulas; if so, do not keep it
         for molID in molid1 + molid2:
             ef = self.TimeSeries[molID]['graph'].ef()
             if (ef in self.ExcludedFormulas or wildmatch(ef, self.ExcludedFormulas)):
-                if self.printlvl >= 2: print("Reaction event includes excluded molecules")
+                if self.printlvl >= 2:
+                    print("Reaction event includes excluded molecules")
                 return None, None
         # Re-create the list of atoms which may be reduced now that spectators are removed
         atoms = np.array(sorted(list(itertools.chain(*[self.TimeSeries[molID]['graph'].L() for molID in molid1]))))
@@ -1625,7 +1634,8 @@ class Nanoreactor(Molecule):
                     atoms = IData['stableIndices'][iintvl]
                     traj_slice = self.atom_select(atoms)[frame:frame + intvl]
                     odir = 'molecules'
-                    if not os.path.exists(odir): os.makedirs(odir)
+                    if not os.path.exists(odir):
+                        os.makedirs(odir)
                     fout = 'molecule_%03i.xyz' % nsave
                     formula = IData['graph'].ef()
                     if self.printlvl >= 2:
@@ -1662,11 +1672,12 @@ class Nanoreactor(Molecule):
             frame = 0
             for intvl, on_off in encode(ts['raw_signal']):
                 if on_off:
-                    if (traj_color[frame:frame + intvl, atoms] != -1).any(): raise RuntimeError(
-                        'traj_color is twice assigned')
+                    if (traj_color[frame:frame + intvl, atoms] != -1).any():
+                        raise RuntimeError('traj_color is twice assigned')
                     traj_color[frame:frame + intvl, atoms] = color
                 frame += intvl
-        if (traj_color == -1).any(): raise RuntimeError('traj_color is not fully assigned')
+        if (traj_color == -1).any():
+            raise RuntimeError('traj_color is not fully assigned')
         return IsomerData, traj_color
 
     def writeReactionEvents(self):
@@ -1691,12 +1702,14 @@ class Nanoreactor(Molecule):
             p_iidx = sorted([self.TimeSeries[i]['iidx'] for i in event['molIDs'][1]])
             for iout, (r_out, p_out) in enumerate(output_iidx):
                 if (r_iidx == r_out and p_iidx == p_out) or (r_iidx == p_out and p_iidx == r_out):
-                    if self.printlvl >= 2: print("reaction ID %s repeats output id %i" % (evid, iout))
+                    if self.printlvl >= 2:
+                        print("reaction ID %s repeats output id %i" % (evid, iout))
                     event['output_id'] = iout
                     break
             else:
                 event['output_id'] = len(output_iidx)
-                if self.printlvl >= 2: print("reaction ID %s assigned output id %i" % (evid, len(output_iidx)))
+                if self.printlvl >= 2:
+                    print("reaction ID %s assigned output id %i" % (evid, len(output_iidx)))
                 output_iidx.append((r_iidx, p_iidx))
 
         odir = 'reactions'
@@ -1708,7 +1721,8 @@ class Nanoreactor(Molecule):
             repeat = 0
             subd = os.path.join(odir, 'reaction_%03i' % iout)
             for iev, (evid, event) in enumerate(self.Events.items()):
-                if not os.path.exists(subd): os.makedirs(subd)
+                if not os.path.exists(subd):
+                    os.makedirs(subd)
                 if event['output_id'] == iout:
                     # Determine the file name
                     if repeat == 0:
@@ -1775,7 +1789,8 @@ class Nanoreactor(Molecule):
         qout = open('charge.dat', 'w')
         for Label in ChargeLabels:
             for AtomChgTuple in Label:
-                # This generates a string like 100 101 102! 103, 0.25; which indicates the atoms in a molecule, the net charge on that molecule, and the atom
+                # This generates a string like 100 101 102! 103, 0.25; which indicates the atoms
+                # in a molecule, the net charge on that molecule, and the atom
                 # with the greatest charge marked by an exclamation point
                 print("%s, %s;" % (
                     ' '.join(["%i%s" % (i, "!" if i == AtomChgTuple[2] else "") for i in AtomChgTuple[0]]),
@@ -1824,8 +1839,8 @@ class Nanoreactor(Molecule):
         # Don't add any molecules if the molecule is already neutralized
         if np.abs(chg) < tol:
             return [], []
-        if self.printlvl >= 2: print(
-            "Attempting to neutralize atoms %s (charge %+.3f spin %+.3f)" % (commadash(atoms), chg, spn))
+        if self.printlvl >= 2:
+            print(f"Attempting to neutralize atoms {commadash(atoms)} (charge {chg:+.3f} spin {spn:+.3f})")
         xyz = np.array(self.atom_select(atoms)[frames].xyzs)
 
         # Ordered dictionary of candidate molecules to be added to the list
@@ -1835,8 +1850,10 @@ class Nanoreactor(Molecule):
         for molID, ts in list(self.TimeSeries.items()):
             # Check to make sure that this molecule exists for ALL frames in the frame selection
             # and does not overlap with ANY atoms in our atom selection.
-            if set(ts['graph'].L()).intersection(set(atoms)): continue
-            if not ts['raw_signal'][frames].all(): continue
+            if set(ts['graph'].L()).intersection(set(atoms)):
+                continue
+            if not ts['raw_signal'][frames].all():
+                continue
             # List of atoms in this molecule
             c_atoms = ts['graph'].L()
             c_chg = np.mean(np.sum(self.Charges[frame1:frame2 + 1, c_atoms], axis=1))
@@ -1881,9 +1898,9 @@ class Nanoreactor(Molecule):
                     "\x1b[91mInconsistent\x1b[0m charge/spin (charge %+.3f -> %+.3f, spin %+.3f -> %+.3f) ; not adding %s" % (
                         curr_chg, new_chg, curr_spn, new_spn, formula))
             elif new_chg * chg < 0 and abs(new_chg) > tol:
-                if self.printlvl >= 2: print(
-                    "\x1b[91mOvershot\x1b[0m the reaction (charge %+.3f -> %+.3f) ; not adding molID %s" % (
-                        curr_chg, new_chg, formula))
+                if self.printlvl >= 2:
+                    print("\x1b[91mOvershot\x1b[0m the reaction (charge %+.3f -> %+.3f) ; "
+                          "not adding molID %s" % (curr_chg, new_chg, formula))
             else:
                 if self.printlvl >= 2: print(
                     "\x1b[91mReducing net charge of\x1b[0m reaction (charge %+.3f -> %+.3f) ; adding molID %s" % (

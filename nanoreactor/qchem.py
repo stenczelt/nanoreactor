@@ -273,10 +273,11 @@ def prepare_template(docstring, fout, chg, mult, method, basis, epsilon=None, mo
     basisname, basissect, ecpname, ecpsect = get_basis(basis, molecule)
     # Write Q-Chem template file.
     with open(fout, 'w') as f:
-        print(docstring.format(chg=chg, mult=mult, method=method,
-                               pcm=('\nsolvent_method      cosmo' if epsilon is not None else ''), basis=(
-                    basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname is not None else ''))),
-              file=f)
+        print(docstring.format(
+            chg=chg, mult=mult, method=method,
+            pcm=('\nsolvent_method      cosmo' if epsilon is not None else ''),
+            basis=(basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname is not None else ''))),
+            file=f)
     # Print general basis and ECP sections to the Q-Chem template file.
     if epsilon is not None:
         with open(fout, 'a') as f:
@@ -453,7 +454,8 @@ class QChem(object):
         # 1) Clean OFF.  Calculation uses whatever is in qcdir and backs it up to qcdsav on successful calcs.
         # 2) Clean ON.  qcdir is always cleared, and copied over from qcdsav (if exist) prior to calling Q-Chem.
         # This allows us to save the state of a good calculation without worrying about outside interference.
-        # - Use case 1: AnalyzeReaction.py does not like to read SCF guesses from previous calculations so we use clean = True.
+        # - Use case 1: AnalyzeReaction.py does not like to read SCF guesses from previous calculations
+        #               so we use clean = True.
         # - Use case 2: Growing string does like to read SCF guesses so we use clean = False.
         # - Use case 3: IRC calculation requires Hessian from a previous calculation, so again we use clean = False.
         self.clean = clean
@@ -473,7 +475,8 @@ class QChem(object):
         elif os.path.exists(self.qcdsav):
             shutil.rmtree(self.qcdsav)
         # Remove self.qcdir; it will be restored from self.qcdsav right before calling Q-Chem.
-        if os.path.exists(self.qcdir): shutil.rmtree(self.qcdir)
+        if os.path.exists(self.qcdir):
+            shutil.rmtree(self.qcdir)
 
     def write(self, *args, **kwargs):
         """ Write the Molecule object to a file. """
@@ -551,7 +554,8 @@ class QChem(object):
         # These need to be troubleshot
         # p0_2335:  p4_error: : 17
         # rm_l_1_3716: rm_l_3_3764: (9.847656) net_send: could not write to fd=5, errno = 32
-        if mode == "mpi": mode = "serial"
+        if mode == "mpi":
+            mode = "serial"
 
         # Set commands to run Q-Chem.
         # The OMP_NUM_THREADS environment variable shall be used to determine
@@ -581,7 +585,8 @@ class QChem(object):
             qcmpi += ' -save'
 
         # Frequency calculations with less atoms than the # of cores should be serial.
-        if M1.na < cores and self.jobtype.lower() == 'freq': mode = "serial"
+        if M1.na < cores and self.jobtype.lower() == 'freq':
+            mode = "serial"
 
         # I don't remember why this is here.  Something about "Recomputing EXC"?
         # if 'scf_algorithm' in self.remscf and self.remscf['scf_algorithm'] == 'rca_diis': mode = "serial"
@@ -629,7 +634,8 @@ class QChem(object):
         # I've run into a lot of TCP socket errors and OpenMP segfaults on Blue Waters.
         for line in open(self.qcerr):
             if 'Unable to open a TCP socket for out-of-band communications' in line:
-                with open(self.qcerr, 'a') as f: print('TCP socket failure :(', file=f)
+                with open(self.qcerr, 'a') as f:
+                    print('TCP socket failure :(', file=f)
                 tarexit.include = ['*']
                 tarexit(1)
         # Note that we do NOT copy qcdir to qcdsav here, because we don't know whether the calculation is good.
@@ -695,9 +701,10 @@ class QChem(object):
             # do NOT read partially converged solutions from the previous
             # attempts.
             self.call_qchem()
-            if all(["failed to converge" not in line and \
-                    "Convergence failure" not in line \
-                    for line in open(self.qcout)]): break
+            if all(["failed to converge" not in line and
+                    "Convergence failure" not in line
+                    for line in open(self.qcout)]):
+                break
             attempt += 1
             if attempt > 6:
                 self.DIE("SCF convergence failure")
@@ -987,7 +994,8 @@ class QChem(object):
             return IRCOut
         # Read information from the first half of the path.
         if M1.Irc[0]['stat'] in [0, 1]:
-            for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M1.Irc[0][i]
+            for i in ['X', 'E', 'Q', 'Sz']:
+                IRCOut[i] += M1.Irc[0][i]
             IRCOut['MFwd'] = 'IRC-Ok'
             IRCOut['LFwd'] += len(M1.Irc[0]['X'])
 
@@ -1008,18 +1016,22 @@ class QChem(object):
                 IRCOut['MFwd' if RCDir == 0 else 'MBak'] = 'Opt-Ok'
                 IRCOut['LFwd' if RCDir == 0 else 'LBak'] += len(M2) - 1
 
-        if M1.Irc[0]['stat'] == 1: append_opt(M1, 0)
+        if M1.Irc[0]['stat'] == 1:
+            append_opt(M1, 0)
 
         # Reverse the IRC data so that it ends in the transition state.
-        for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] = IRCOut[i][::-1]
+        for i in ['X', 'E', 'Q', 'Sz']:
+            IRCOut[i] = IRCOut[i][::-1]
         # Now read the second IRC direction.
         if M1.Irc[1]['stat'] in [0, 1]:
-            for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M1.Irc[1][i][1:]
+            for i in ['X', 'E', 'Q', 'Sz']:
+                IRCOut[i] += M1.Irc[1][i][1:]
             IRCOut['MBak'] = 'IRC-Ok'
             IRCOut['LBak'] += len(M1.Irc[1]['X']) - 1
         # If we need to continue the geometry optimization, do so
         # and then append the output data to the IRC data structure.
-        if M1.Irc[1]['stat'] == 1: append_opt(M1, 1)
+        if M1.Irc[1]['stat'] == 1:
+            append_opt(M1, 1)
         # If the forward direction caused the calculation to quit, then we must repeat the calculation
         # in the backward direction and treat the first half of the reversed IRC as the second half of
         # the forward IRC.
@@ -1043,7 +1055,8 @@ class QChem(object):
             if M3.Irc[0]['stat'] == 2:
                 IRCOut['MBak'] = M3.qcerr
             if M3.Irc[0]['stat'] in [0, 1]:
-                for i in ['X', 'E', 'Q', 'Sz']: IRCOut[i] += M3.Irc[0][i][1:]
+                for i in ['X', 'E', 'Q', 'Sz']:
+                    IRCOut[i] += M3.Irc[0][i][1:]
                 IRCOut['LBak'] += len(M3.Irc[0]['X']) - 1
                 IRCOut['MBak'] = 'IRC-Ok'
             if M3.Irc[0]['stat'] == 1:
@@ -1110,7 +1123,8 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
                 # Run frequency calculation to start off IRC!
                 print("Final frequency calculation.")
                 QCTS.freq()
-                if vout is not None: QCTS.write_vdata(vout)
+                if vout is not None:
+                    QCTS.write_vdata(vout)
             break
         print("Ensuring HF/KS stability of optimized structure.")
         QCTS.make_stable()
@@ -1119,7 +1133,8 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
                 # Run frequency calculation to start off IRC!
                 print("HF/KS stable; final frequency calculation.")
                 QCTS.freq()
-                if vout is not None: QCTS.write_vdata(vout)
+                if vout is not None:
+                    QCTS.write_vdata(vout)
             else:
                 print("HF/KS stable")
             break
@@ -1170,8 +1185,10 @@ def ProcessIRC(IRCData, xyz0=None):
         M.elem = IRCData['M'].elem
     # Get coordinates and Mulliken populations from IRCData.
     M.xyzs = IRCData['X'] if fwd else IRCData['X'][::-1]
-    if 'Q' in IRCData: M.qm_mulliken_charges = IRCData['Q'] if fwd else IRCData['Q'][::-1]
-    if 'Sz' in IRCData: M.qm_mulliken_spins = IRCData['Sz'] if fwd else IRCData['Sz'][::-1]
+    if 'Q' in IRCData:
+        M.qm_mulliken_charges = IRCData['Q'] if fwd else IRCData['Q'][::-1]
+    if 'Sz' in IRCData:
+        M.qm_mulliken_spins = IRCData['Sz'] if fwd else IRCData['Sz'][::-1]
     # Get IRC energies in kcal/mol referenced to the initial frame.
     E = np.array(IRCData['E'] if fwd else IRCData['E'][::-1])
     E_kc = E.copy()

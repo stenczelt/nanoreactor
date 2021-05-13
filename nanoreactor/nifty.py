@@ -19,6 +19,7 @@ import distutils.dir_util
 import filecmp
 import itertools
 import os
+import re
 import shutil
 import sys
 from select import select
@@ -133,7 +134,7 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 # reduced Planck's constant    1.054571817e-34 (exact)
 # calorie-joule relationship   4.184 J (exact; from NIST)
 
-## Boltzmann constant in kJ mol^-1 k^-1
+# Boltzmann constant in kJ mol^-1 k^-1
 kb = 0.008314462618  # Previous value: 0.0083144100163
 kb_si = 1.380649e-23
 
@@ -157,9 +158,9 @@ amu2au = amu_mass / au_mass
 cm2au = 100 * c_lightspeed * (2 * np.pi * hbar) * avogadro / 1000 / au2kj  # Multiply to convert cm^-1 to Hartree
 ambervel2au = 9.349961132249932e-04  # Multiply to go from AMBER velocity unit Ang/(1/20.455 ps) to bohr/atu.
 
-## Q-Chem to GMX unit conversion for energy
+# Q-Chem to GMX unit conversion for energy
 eqcgmx = au2kj  # Previous value: 2625.5002
-## Q-Chem to GMX unit conversion for force
+# Q-Chem to GMX unit conversion for force
 fqcgmx = -grad_au2gmx  # Previous value: -49621.9
 
 
@@ -289,11 +290,18 @@ def uncommadash(s):
 
 def natural_sort(l):
     """ Return a natural sorted list. """
+
     # Convert a character to a digit or a lowercase character
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    def convert(text):
+        if text.isdigit():
+            int(text)
+        else:
+            text.lower()
+
     # Split string into "integer" and "noninteger" fields and convert each one
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     # Sort strings using these keys in descending order of importance, I guess.
+
     return sorted(l, key=alphanum_key)
 
 
@@ -358,9 +366,11 @@ def printcool(text, sym="#", bold=False, color=2, ansi=None, bottom='-', minwidt
                     "%s| \x1b[%s9%im%s " % (sym, bold and "1;" or "", color, padleft) + line + " %s\x1b[0m |%s\n" % (
                         padright, sym))
             # if color == 3 or color == 7:
-            #     print "%s\x1b[40m\x1b[%s9%im%s" % (''.join([sym for i in range(3)]), bold and "1;" or "", color, padleft),line,"%s\x1b[0m%s" % (padright, ''.join([sym for i in range(3)]))
+            #     print "%s\x1b[40m\x1b[%s9%im%s" % (''.join([sym for i in range(3)]), bold and
+            #           "1;" or "", color, padleft),line,"%s\x1b[0m%s" % (padright, ''.join([sym for i in range(3)]))
             # else:
-            #     print "%s\x1b[%s9%im%s" % (''.join([sym for i in range(3)]), bold and "1;" or "", color, padleft),line,"%s\x1b[0m%s" % (padright, ''.join([sym for i in range(3)]))
+            #     print "%s\x1b[%s9%im%s" % (''.join([sym for i in range(3)]), bold and "1;" or
+            #           "", color, padleft),line,"%s\x1b[0m%s" % (padright, ''.join([sym for i in range(3)]))
         else:
             warn_press_key("Inappropriate use of printcool")
     logger.info(bar + '\n')
@@ -377,7 +387,8 @@ def printcool_dictionary(Dict, title="Dictionary Keys : Values", bold=False, col
     @param[in] dict The dictionary to be printed
     @param[in] title The title of the printout
     """
-    if Dict is None: return
+    if Dict is None:
+        return
     bar = printcool(title, bold=bold, color=color, minwidth=topwidth, center=center)
 
     def magic_string(str):
@@ -425,7 +436,8 @@ def isfloat(word):
         word = str(word)
     except:
         return False
-    if len(word) == 0: return False
+    if len(word) == 0:
+        return False
     return re.match(r'^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$', word)
 
 
@@ -594,16 +606,19 @@ def monotonic_decreasing(arr, start=None, end=None, verbose=False):
         end = len(arr) - 1
     a0 = arr[start]
     idx = [start]
-    if verbose: logger.info("Starting @ %i : %.6f\n" % (start, arr[start]))
+    if verbose:
+        logger.info("Starting @ %i : %.6f\n" % (start, arr[start]))
     if end > start:
         i = start + 1
         while i < end:
             if arr[i] < a0:
                 a0 = arr[i]
                 idx.append(i)
-                if verbose: logger.info("Including  %i : %.6f\n" % (i, arr[i]))
+                if verbose:
+                    logger.info("Including  %i : %.6f\n" % (i, arr[i]))
             else:
-                if verbose: logger.info("Excluding  %i : %.6f\n" % (i, arr[i]))
+                if verbose:
+                    logger.info("Excluding  %i : %.6f\n" % (i, arr[i]))
             i += 1
     if end < start:
         i = start - 1
@@ -611,9 +626,11 @@ def monotonic_decreasing(arr, start=None, end=None, verbose=False):
             if arr[i] < a0:
                 a0 = arr[i]
                 idx.append(i)
-                if verbose: logger.info("Including  %i : %.6f\n" % (i, arr[i]))
+                if verbose:
+                    logger.info("Including  %i : %.6f\n" % (i, arr[i]))
             else:
-                if verbose: logger.info("Excluding  %i : %.6f\n" % (i, arr[i]))
+                if verbose:
+                    logger.info("Excluding  %i : %.6f\n" % (i, arr[i]))
             i -= 1
     return np.array(idx)
 
@@ -806,9 +823,11 @@ def statisticalInefficiency(A_n, B_n=None, fast=False, mintime=3, warn=True):
         # Increment t and the amount by which we increment t.
         t += increment
         # Increase the interval if "fast mode" is on.
-        if fast: increment += 1
+        if fast:
+            increment += 1
     # g must be at least unity
-    if g < 1.0: g = 1.0
+    if g < 1.0:
+        g = 1.0
     # Return the computed statistical inefficiency.
     return g
 
@@ -976,7 +995,8 @@ def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose
     for f in output_files:
         lf = os.path.join(cwd, f)
         task.specify_output_file(lf, f, cache=False)
-    if tag is None: tag = command
+    if tag is None:
+        tag = command
     task.specify_tag(tag)
     task.print_time = print_time
     taskid = wq.submit(task)
@@ -1009,7 +1029,8 @@ def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None
     for f in output_files:
         # print f[0], f[1]
         task.specify_output_file(f[0], f[1], cache=False)
-    if tag is None: tag = command
+    if tag is None:
+        tag = command
     task.specify_tag(tag)
     task.print_time = print_time
     taskid = wq.submit(task)
@@ -1024,7 +1045,8 @@ def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None
 def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
     """ This function waits ten seconds to see if a task in the Work Queue has finished. """
     global WQIDS
-    if verbose: logger.info('---\n')
+    if verbose:
+        logger.info('---\n')
     if wait_intvl >= wait_time:
         wait_time = wait_intvl
         numwaits = 1
@@ -1069,16 +1091,16 @@ def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
         # LPW 2018-09-10 Updated to use stats fields from CCTools 6.2.10
         # Please upgrade CCTools version if errors are encountered during runtime.
         if verbose:
-            logger.info("Workers: %i init, %i idle, %i busy, %i total joined, %i total removed\n" \
+            logger.info("Workers: %i init, %i idle, %i busy, %i total joined, %i total removed\n"
                         % (wq.stats.workers_init, wq.stats.workers_idle, wq.stats.workers_busy, wq.stats.workers_joined,
                            wq.stats.workers_removed))
-            logger.info("Tasks: %i running, %i waiting, %i dispatched, %i submitted, %i total complete\n" \
+            logger.info("Tasks: %i running, %i waiting, %i dispatched, %i submitted, %i total complete\n"
                         % (wq.stats.tasks_running, wq.stats.tasks_waiting, wq.stats.tasks_dispatched,
                            wq.stats.tasks_submitted, wq.stats.tasks_done))
             logger.info("Data: %i / %i kb sent/received\n" % (
                 int(wq.stats.bytes_sent / 1024), int(wq.stats.bytes_received / 1024)))
         else:
-            logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" % \
+            logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" %
                         (time.ctime(), wq.stats.workers_busy, wq.stats.workers_connected, wq.stats.tasks_done,
                          wq.stats.tasks_submitted))
             if time.time() - wq_wait1.t0 > 900:
@@ -1135,16 +1157,19 @@ def bak(path, dest=None, cwd=None, start=1):
         os.chdir(cwd)
     if os.path.exists(path):
         dnm, fnm = os.path.split(path)
-        if dnm == '': dnm = '.'
+        if dnm == '':
+            dnm = '.'
         base, ext = os.path.splitext(fnm)
         if dest is None:
             dest = dnm
-        if not os.path.isdir(dest): os.makedirs(dest)
+        if not os.path.isdir(dest):
+            os.makedirs(dest)
         i = start
         while True:
             fnm = "%s_%i%s" % (base, i, ext)
             newf = os.path.join(dest, fnm)
-            if not os.path.exists(newf): break
+            if not os.path.exists(newf):
+                break
             i += 1
         logger.info("Backing up %s -> %s\n" % (oldf, newf))
         shutil.move(oldf, newf)
@@ -1186,7 +1211,7 @@ def onefile(fnm=None, ext=None, err=False):
                     logger.info("\x1b[93monefile() will copy %s to %s\x1b[0m\n" % (os.path.abspath(fnm), os.getcwd()))
                     shutil.copy2(fsrc, fdest)
             return os.path.basename(fnm)
-        elif err == True or ext is None:
+        elif err or ext is None:
             logger.error("File specified by %s does not exist!" % fnm)
             raise RuntimeError
         elif ext is not None:
@@ -1284,12 +1309,16 @@ def extract_tar(tarfnm, fnms, force=False):
     # Get path of tar file.
     fdir = os.path.abspath(os.path.dirname(tarfnm))
     # If all files exist, then return - no need to extract.
-    if (not force) and all([os.path.exists(os.path.join(fdir, f)) for f in fnms]): return
+    if (not force) and all([os.path.exists(os.path.join(fdir, f)) for f in fnms]):
+        return
     # If the tar file doesn't exist or isn't valid, do nothing.
-    if not os.path.exists(tarfnm): return
-    if not tarfile.is_tarfile(tarfnm): return
+    if not os.path.exists(tarfnm):
+        return
+    if not tarfile.is_tarfile(tarfnm):
+        return
     # Check type of fnms argument.
-    if isinstance(fnms, six.string_types): fnms = [fnms]
+    if isinstance(fnms, six.string_types):
+        fnms = [fnms]
     # Load the tar file.
     arch = tarfile.open(tarfnm, 'r')
     # Extract only the files we have (to avoid an exception).
@@ -1315,7 +1344,8 @@ def GoInto(Dir):
 def allsplit(Dir):
     # Split a directory into all directories involved.
     s = os.path.split(os.path.normpath(Dir))
-    if s[1] == '' or s[1] == '.': return []
+    if s[1] == '' or s[1] == '.':
+        return []
     return allsplit(s[0]) + [s[1]]
 
 
@@ -1373,7 +1403,8 @@ def wopen(dest, binary=False):
 
 
 def LinkFile(src, dest, nosrcok=False):
-    if os.path.abspath(src) == os.path.abspath(dest): return
+    if os.path.abspath(src) == os.path.abspath(dest):
+        return
     if os.path.exists(src):
         # Remove broken link
         if os.path.islink(dest) and not os.path.exists(dest):

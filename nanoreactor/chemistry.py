@@ -7,7 +7,7 @@ import numpy as np
 # Do BondEnergies[Elem1][Elem2][BO]
 BondEnergies = defaultdict(lambda: defaultdict(dict))
 
-## Covalent radii from Cordero et al. 'Covalent radii revisited' Dalton Transactions 2008, 2832-2838.
+# # Covalent radii from Cordero et al. 'Covalent radii revisited' Dalton Transactions 2008, 2832-2838.
 # Sodium replaced 1.66 -> 1.0.  I think ionic radii are more appropriate.
 Radii = [0.31, 0.28,  # H and He
          1.28, 0.96, 0.84, 0.76, 0.71, 0.66, 0.57, 0.58,  # First row elements

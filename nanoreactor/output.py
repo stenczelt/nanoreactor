@@ -32,7 +32,8 @@ class NanoLogger(Logger):
         self.verbosity = verbosity
 
     def debug(self, msg, printlvl=0, newline=True, *args, **kwargs):
-        if printlvl > self.verbosity: return
+        if printlvl > self.verbosity:
+            return
         if self.verbosity >= 2 and not msg.strip().startswith(time.ctime()):
             msg = "%s : %s" % (time.ctime(), msg)
         if newline and not msg.endswith('\n'):
@@ -40,7 +41,8 @@ class NanoLogger(Logger):
         super(NanoLogger, self).debug(msg, *args, **kwargs)
 
     def info(self, msg, printlvl=0, newline=True, *args, **kwargs):
-        if printlvl > self.verbosity: return
+        if printlvl > self.verbosity:
+            return
         if self.verbosity >= 2 and not msg.strip().startswith(time.ctime()):
             msg = "%s : %s" % (time.ctime(), msg)
         if newline and not msg.endswith('\n'):

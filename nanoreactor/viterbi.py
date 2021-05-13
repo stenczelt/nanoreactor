@@ -231,7 +231,7 @@ def _viterbi(signal, metastability, p_correct):
         for k in range(n_states):
 
             # do everything in log space, so this product is actually a sum
-            row_log_product = row_of_log_transition_matrix(k) + V[t - 1, :];
+            row_log_product = row_of_log_transition_matrix(k) + V[t - 1, :]
             maxval = np.max(row_log_product)
             ptr = np.argmax(row_log_product)
 

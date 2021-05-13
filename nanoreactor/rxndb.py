@@ -317,7 +317,8 @@ def analyze_path(xyz, nrg, cwd, xyz0=None, label="Reaction", draw=2):
             # If the topologies are completely equal then there wasn't a reaction at all.
             status = 'incorrect'
             message = 'no reaction'
-            if draw < 3: draw = 0
+            if draw < 3:
+                draw = 0
         elif MolEqual(pathR, initR) and MolEqual(pathP, initP):
             # The path and initial path have matching reactant and product
             # molecules but the atoms in molecules (AIM) are different.
@@ -335,7 +336,8 @@ def analyze_path(xyz, nrg, cwd, xyz0=None, label="Reaction", draw=2):
             if MolEqual(pathR, pathP):
                 # If the molecules haven't changed then it's a trivial rearrangement.
                 message = 'same molecules'
-                if draw < 3: draw = 0
+                if draw < 3:
+                    draw = 0
             elif any([MolEqual(pathR, initR), MolEqual(pathP, initP)]):
                 message = 'matched one side'
             elif any([MolEqual(pathR, initP), MolEqual(pathP, initR)]):
@@ -390,7 +392,8 @@ def analyze_path(xyz, nrg, cwd, xyz0=None, label="Reaction", draw=2):
         draw = (not os.path.exists('%s/reaction.pdf' % cwd))
     elif draw == 1:
         draw = (status == 'correct') and (not os.path.exists('%s/reaction.pdf' % cwd))
-    if draw < 3: draw = (draw and not MolEqual(pathR, pathP))
+    if draw < 3:
+        draw = (draw and not MolEqual(pathR, pathP))
     if draw:
         owd = os.getcwd()
         os.chdir(cwd)
@@ -470,7 +473,8 @@ def parse_input_files(inps):
     for inp in inps:
         # Remove comment lines
         inp = inp.split("#")[0].strip()
-        if len(inp) == 0: continue
+        if len(inp) == 0:
+            continue
         if os.path.isdir(inp):
             nfid = 0
             # If a directory, loop over the contents
@@ -619,11 +623,13 @@ def make_task(cmd, cwd, inputs=[], outputs=[], tag=None, calc=None, verbose=0, p
         logger.info("\x1b[94mWQ task\x1b[0m '%s'; taskid %i priority %i" % (task.tag, taskid, priority), printlvl=3)
     else:
         # Run the calculation locally.
-        if calc is not None: calc.saveStatus('launch')
+        if calc is not None:
+            calc.saveStatus('launch')
         _exec(cmd, print_command=(verbose >= 3), persist=True, cwd=cwd)
         # After executing the task, run launch() again
         # because launch() is designed to be multi-pass.
-        if calc is not None: calc.launch()
+        if calc is not None:
+            calc.launch()
 
 
 class Calculation(object):
@@ -775,7 +781,8 @@ class Calculation(object):
             self.message = message
             statout += ' ' + message
         # Save status to disk if desired.
-        if self.read_only: to_disk = False
+        if self.read_only:
+            to_disk = False
         if to_disk:
             with open(statpath, 'w') as f:
                 print(statout, file=f)
@@ -917,7 +924,8 @@ class FragmentID(Calculation):
             else:
                 self.launch()
             return
-        if self.read_only: return
+        if self.read_only:
+            return
         # Otherwise we run the fragment identification calculation.
         # Ensure that this calculation contains a Molecule object.
         if not isinstance(self.initial, Molecule):
@@ -983,7 +991,8 @@ class FragmentOpt(Calculation):
             else:
                 self.launch()
             return
-        if self.read_only: return
+        if self.read_only:
+            return
         # Note that the "last" method and basis set is used for the fragment optimization
         make_task("optimize-fragments.py --method %s --basis \"%s\" &> fragmentopt.log" %
                   (self.methods[-1], self.bases[-1]),
@@ -1041,7 +1050,8 @@ class Optimization(Calculation):
             else:
                 self.launch()
             return
-        if self.read_only: return
+        if self.read_only:
+            return
         # Otherwise we run the optimization calculation.
         # Ensure that this calculation contains a Molecule object.
         if not isinstance(self.initial, Molecule):
@@ -1097,7 +1107,8 @@ class TransitionState(Calculation):
                 self.saveStatus('failed')
                 for line in errmsg:
                     logger.info(line, printlvl=2)
-                if (not self.ts_branch): self.parent.launch()
+                if (not self.ts_branch):
+                    self.parent.launch()
                 return
 
         if os.path.exists(os.path.join(self.home, 'irc.xyz')):
@@ -1126,13 +1137,15 @@ class TransitionState(Calculation):
                         logger.info(line)
                 else:
                     logger.info("deltaG.nrg file missing, can't report energy information")
-            if (not self.ts_branch): self.parent.launch()
+            if (not self.ts_branch):
+                self.parent.launch()
         else:
             if os.path.exists(os.path.join(self.home, 'transition-state.log')):
                 logger.info("Log file is present, no error but result is missing. Check this log file:", printlvl=2)
                 for line in open(os.path.join(self.home, 'transition-state.log')).readlines():
                     logger.info(line, printlvl=2)
-            if self.read_only: return
+            if self.read_only:
+                return
             # Otherwise we run the transition state calculation.
             # Create the Molecule object (if one wasn't passed in),
             # set charge and multiplicity.
@@ -1153,7 +1166,8 @@ class TransitionState(Calculation):
             self.initpath.write(os.path.join(self.home, 'initpath.xyz'))
             # Launch the transition state calculation!
             make_task(
-                "transition-state.py initial.xyz --initpath initpath.xyz --methods %s --bases %s --charge %i --mult %i &> transition-state.log" %
+                "transition-state.py initial.xyz --initpath initpath.xyz --methods %s "
+                "--bases %s --charge %i --mult %i &> transition-state.log" %
                 (' '.join(["\"%s\"" % i for i in self.methods]), ' '.join(["\"%s\"" % i for i in self.bases]),
                  self.charge, self.mult),
                 self.home, inputs=["initial.xyz", "initpath.xyz"],
@@ -1214,7 +1228,8 @@ class FreezingString(Calculation):
                 logger.info("Log file is present, no error but result is missing. Check this log file:", printlvl=2)
                 for line in open(os.path.join(self.home, 'freezing-string.log')).readlines():
                     logger.info(line, printlvl=2)
-            if self.read_only: return
+            if self.read_only:
+                return
             # Otherwise we run the calculation.
             if not isinstance(self.initial, Molecule):
                 M = Molecule(self.initial)
@@ -1286,7 +1301,8 @@ class FreezingString(Calculation):
 #        # The path of the individual growing string calculation.
 #        rdir = os.path.join(self.home, '%02i' % ncalc)
 #        # Extract the growing string archive file.
-#        extract_tar(os.path.join(rdir, 'growing-string.tar.bz2'), ['Vfile.txt', 'tsestimate.xyz', 'final-string.xyz', 'final-string.pop'])
+#        extract_tar(os.path.join(rdir, 'growing-string.tar.bz2'),
+#        ['Vfile.txt', 'tsestimate.xyz', 'final-string.xyz', 'final-string.pop'])
 #        # Large initial value, used in case there are no pgrads.
 #        pgrads = []
 #        # Number of iterations.
@@ -1334,15 +1350,17 @@ class FreezingString(Calculation):
 #                gsstat = 'error'
 #                errmsg = 'Spline interpolation error'
 #        if ncalc not in self.printed:
-#            logger.info("GrowingString   segment \x1b[94m%i\x1b[0m : %i cycles, pgrad = %.3f, status: %s" % (ncalc, len(pgrads), pgrads[-1], gsstat), printlvl=2)
+#            logger.info("GrowingString   segment \x1b[94m%i\x1b[0m : %i cycles,
+#            pgrad = %.3f, status: %s" % (ncalc, len(pgrads), pgrads[-1], gsstat), printlvl=2)
 #            self.printed.append(ncalc)
 #        # If the growing string calculation meets these criteria, then launch the transition state search.
 #        ts_launch = False
 #        if gsstat == 'cnvgd' or (gsstat == 'maxiter' and pgrads[-1] < ts_grad):
 #            if ncalc not in self.TransitionStates:
-#                self.TransitionStates[ncalc] = TransitionState(os.path.join(rdir, 'tsestimate.xyz'), home=os.path.join(rdir, 'TS'),
-#                                                               initpath=os.path.join(rdir, 'final-string.xyz'), parent=self,
-#                                                               charge=self.charge, mult=self.mult, priority=self.priority+self.dprio+100, **self.kwargs)
+#                self.TransitionStates[ncalc] = TransitionState(
+#                    os.path.join(rdir, 'tsestimate.xyz'), home=os.path.join(rdir, 'TS'),
+#                    initpath=os.path.join(rdir, 'final-string.xyz'), parent=self,
+#                    charge=self.charge, mult=self.mult, priority=self.priority+self.dprio+100, **self.kwargs)
 #                self.TransitionStates[ncalc].launch()
 #                ts_launch = True
 #        return pgrads, gsstat, errmsg, ts_launch
@@ -1403,7 +1421,8 @@ class FreezingString(Calculation):
 #            return
 #
 #        if self.read_only: return
-#        self.saveStatus('launch', message='%s from cycle %i' % ('Starting' if len(pgrads) == 0 else 'Continuing', len(pgrads)))
+#        self.saveStatus('launch', message='%s from cycle %i' % ('Starting' if len(pgrads) == 0 else
+#                       'Continuing', len(pgrads)))
 #        # At this point in the code, we will create a new growing string calculation.
 #        if ncalc > 0:
 #            # If previous calculations exist, then get the final string from the previous segment.
@@ -1424,8 +1443,10 @@ class FreezingString(Calculation):
 #        ncycles = {0:20, 1:30, 2:50, 3:100}
 #
 #        # Launch the task.
-#        make_task("growing-string.py initial.xyz --method %s --basis \"%s\" --charge %i --mult %i --cycles %i --images %i %s &> growing-string.log" %
-#                  (self.methods[0], self.bases[0], self.charge, self.mult, ncycles.get(ncalc, 100), self.images, '--stab' if self.stability_analysis else ''),
+#        make_task("growing-string.py initial.xyz --method %s --basis \"%s\" --charge %i "
+#                  "--mult %i --cycles %i --images %i %s &> growing-string.log" %
+#                  (self.methods[0], self.bases[0], self.charge, self.mult, ncycles.get(ncalc, 100),
+#                   self.images, '--stab' if self.stability_analysis else ''),
 #                  nextd, inputs=["initial.xyz"], outputs=["growing-string.log", "growing-string.tar.bz2"],
 #                  tag=self.name, calc=self, verbose=self.verbose, priority=self.priority + self.dprio)
 #
@@ -1449,7 +1470,8 @@ class Interpolation(Calculation):
             # pathway has failed.
             self.saveStatus('failed')
             return
-        if self.read_only: return
+        if self.read_only:
+            return
         if not isinstance(self.initial, Molecule):
             M = Molecule(self.initial)
         else:
@@ -1457,7 +1479,8 @@ class Interpolation(Calculation):
         M.write(os.path.join(self.home, '.interpolate.in.xyz'))
         # Note that the "first" method and basis set is used for the geometry optimization.
         make_task(
-            "Nebterpolate.py --morse 1e-2 --repulsive --allpairs --anchor 2 .interpolate.in.xyz interpolated.xyz &> interpolate.log",
+            "Nebterpolate.py --morse 1e-2 --repulsive --allpairs --anchor 2 .interpolate.in.xyz "
+            "interpolated.xyz &> interpolate.log",
             self.home, inputs=[".interpolate.in.xyz"], outputs=["interpolate.log", "interpolated.xyz"],
             tag=self.name + "_interpolate", calc=self, verbose=self.verbose)
 
@@ -1569,10 +1592,12 @@ class Pathway(Calculation):
         # if not hasattr(self, 'GS'):
         #    # With MPI, stability analysis is quite affordable so we'll enable it by default
         #    self.GS = GrowingString(InterSpaced, home=os.path.join(self.home, 'GS'),
-        #                            parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
+        #                            parent=self, charge=self.charge, mult=self.mult,
+        #                            stability_analysis=True, priority=self.priority, **self.kwargs)
         #    self.GS.launch()
         #    # self.GSSA = GrowingString(InterSpaced, home=os.path.join(self.home, 'GSSA'),
-        #    #                         parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
+        #    #                         parent=self, charge=self.charge, mult=self.mult,
+        #    #                         stability_analysis=True, priority=self.priority, **self.kwargs)
         #    # self.GSSA.launch()
 
 
@@ -1626,9 +1651,12 @@ class Trajectory(Calculation):
         self.structureFolder = os.path.join(self.home, 'structures')
         self.pathwayFolder = os.path.join(self.home, 'pathways')
         # Denotes whether the class contains the full complement of optimizations.
-        if not os.path.exists(self.fragmentFolder): os.makedirs(self.fragmentFolder)
-        if not os.path.exists(self.structureFolder): os.makedirs(self.structureFolder)
-        if not os.path.exists(self.pathwayFolder): os.makedirs(self.pathwayFolder)
+        if not os.path.exists(self.fragmentFolder):
+            os.makedirs(self.fragmentFolder)
+        if not os.path.exists(self.structureFolder):
+            os.makedirs(self.structureFolder)
+        if not os.path.exists(self.pathwayFolder):
+            os.makedirs(self.pathwayFolder)
 
     def makeFragments(self):
         """ Create and launch fragment identifications. This code is called ONCE per trajectory"""
@@ -1846,7 +1874,8 @@ class Trajectory(Calculation):
         for fi in path_initial:
             for fj in path_final:
                 if fj > fi and (not self.Equal(OptMols[fi], OptMols[fj])):
-                    if (fj - fi) > self.pathmax: continue
+                    if (fj - fi) > self.pathmax:
+                        continue
                     NewPair = True
                     for imp, (m1, m2) in enumerate(MolPairs):
                         if self.Equal(OptMols[fi], m1) and self.Equal(OptMols[fj], m2):
