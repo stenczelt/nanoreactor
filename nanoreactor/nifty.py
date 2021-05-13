@@ -454,7 +454,7 @@ def floatornan(word):
     if isfloat(word):
         return float(word)
     else:
-        logger.info("Setting %s to % .1e\n" % big)
+        logger.info("Setting {} to {: .1e}\n".format(word, big))
         return big
 
 
@@ -694,8 +694,8 @@ def get_least_squares(x, y, w=None, thresh=1e-12):
     # Build the weight matrix.
     if w is not None:
         if len(w) != n_x:
-            warn_press_key(
-                "The weight array length (%i) must be the same as the number of 'X' data points (%i)!" % len(w), n_x)
+            warn_press_key("The weight array length ({:d}) must be the same "
+                           "as the number of 'X' data points ({:d})!".format(len(w), n_x))
         w /= np.mean(w)
         WH = np.diag(w ** 0.5)
     else:
@@ -1128,7 +1128,7 @@ def splitall(path):
 def bak(path, dest=None, cwd=None, start=1):
     oldf = path
     newf = None
-    if cwd != None:
+    if cwd is not None:
         if not os.path.exists(cwd):
             raise RuntimeError("%s is not an existing folder" % cwd)
         old_d = os.getcwd()
@@ -1148,7 +1148,7 @@ def bak(path, dest=None, cwd=None, start=1):
             i += 1
         logger.info("Backing up %s -> %s\n" % (oldf, newf))
         shutil.move(oldf, newf)
-    if cwd != None:
+    if cwd is not None:
         os.chdir(old_d)
     return newf
 

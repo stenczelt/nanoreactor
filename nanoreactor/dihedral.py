@@ -123,7 +123,7 @@ def _get_indices_chi(conformation):
             a3 = np.where(((AName == "CG") | (AName == "CG1")) & (RID == i))[0][0]
         except:
             a3 = None
-        if a3 == None or a2 == None:
+        if a3 is None or a2 is None:
             continue
         Indices.append([a0, a1, a2, a3])
 

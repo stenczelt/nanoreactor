@@ -9,14 +9,13 @@ import sysconfig
 from collections import Counter, OrderedDict, namedtuple
 from ctypes import *
 from datetime import date
+# For Python 3 compatibility
+from itertools import zip_longest as zip_longest
 
 import numpy as np
 from numpy import arccos, cos, sin
 from numpy.linalg import multi_dot
 from pkg_resources import parse_version
-
-# For Python 3 compatibility
-from itertools import zip_longest as zip_longest
 
 
 # Special error which is thrown when TINKER .arc data is detected in a .xyz file
@@ -1025,8 +1024,10 @@ def EqualSpacing(Mol, frames=0, dx=0, RMSD=True, align=True):
         Molecule object for equalizing the spacing.
     frames : int
         Return a Molecule object with this number of frames.
+    dx
     RMSD : bool
         Use RMSD in the arc length calculation.
+    align
 
     Returns
     -------
@@ -2694,7 +2695,7 @@ class Molecule(object):
                     PathLength = nx.shortest_path_length(g, a, b)
                 except nx.exception.NetworkXNoPath:
                     PathLength = 0
-                if PathLength > 0 and PathLength <= (max_size - 2):
+                if 0 < PathLength <= (max_size - 2):
                     if b > a:
                         triplets.append((a, i, b))
                     else:
@@ -2968,7 +2969,8 @@ class Molecule(object):
     # =====================================#
     # |         Reading functions         |#
     # =====================================#
-    def read_qcschema(self, schema, **kwargs):
+    @staticmethod
+    def read_qcschema(schema, **kwargs):
 
         # Already read in
         if isinstance(schema, dict):
@@ -2992,7 +2994,8 @@ class Molecule(object):
         except ActuallyArcError:
             return self.read_arc(fnm, **kwargs)
 
-    def read_xyz0(self, fnm, **kwargs):
+    @staticmethod
+    def read_xyz0(fnm, **kwargs):
         """ Parse a .xyz file which contains several xyz coordinates, and return their elements.
 
         @param[in] fnm The input file name
@@ -3089,7 +3092,8 @@ class Molecule(object):
             Answer['boxes'] = boxes
         return Answer
 
-    def read_inpcrd(self, fnm, **kwargs):
+    @staticmethod
+    def read_inpcrd(fnm, **kwargs):
         """ Parse an AMBER .inpcrd or .rst file.
 
         @param[in] fnm The input file name
@@ -3157,7 +3161,8 @@ class Molecule(object):
             Answer['boxes'] = boxes
         return Answer
 
-    def read_qdata(self, fnm, **kwargs):
+    @staticmethod
+    def read_qdata(fnm, **kwargs):
         xyzs = []
         energies = []
         grads = []
@@ -3247,7 +3252,8 @@ class Molecule(object):
 
         return Answer
 
-    def read_dcd(self, fnm, **kwargs):  # pragma: no cover
+    @staticmethod
+    def read_dcd(fnm, **kwargs):  # pragma: no cover
         xyzs = []
         boxes = []
         if _dcdlib.vmdplugin_init() != 0:
@@ -3276,7 +3282,8 @@ class Molecule(object):
                   'boxes': boxes}
         return Answer
 
-    def read_com(self, fnm, **kwargs):
+    @staticmethod
+    def read_com(fnm, **kwargs):
         """ Parse a Gaussian .com file and return a SINGLE-ELEMENT list of xyz coordinates (no multiple file support)
 
         @param[in] fnm The input file name
@@ -3320,7 +3327,8 @@ class Molecule(object):
                   'mult': mult}
         return Answer
 
-    def read_arc(self, fnm, **kwargs):
+    @staticmethod
+    def read_arc(fnm, **kwargs):
         """ Read a TINKER .arc file.
 
         @param[in] fnm  The input file name
@@ -3402,7 +3410,8 @@ class Molecule(object):
         if len(boxes) > 0: Answer['boxes'] = boxes
         return Answer
 
-    def read_gro(self, fnm, **kwargs):
+    @staticmethod
+    def read_gro(fnm, **kwargs):
         """ Read a GROMACS .gro file.
 
         """
@@ -3484,7 +3493,8 @@ class Molecule(object):
                   'comms': comms}
         return Answer
 
-    def read_charmm(self, fnm, **kwargs):
+    @staticmethod
+    def read_charmm(fnm, **kwargs):
         """ Read a CHARMM .cor (or .crd) file.
 
         """
@@ -3535,7 +3545,8 @@ class Molecule(object):
                   'comms': comms}
         return Answer
 
-    def read_qcin(self, fnm, **kwargs):
+    @staticmethod
+    def read_qcin(fnm, **kwargs):
         """ Read a Q-Chem input file.
 
         These files can be very complicated, and I can't write a completely
@@ -3775,7 +3786,8 @@ class Molecule(object):
 
         return Answer
 
-    def read_qcesp(self, fnm, **kwargs):
+    @staticmethod
+    def read_qcesp(fnm, **kwargs):
         espxyz = []
         espval = []
         for line in open(fnm):
@@ -4210,7 +4222,7 @@ class Molecule(object):
                     for line in SectData:
                         out.append(line)
                     if SectName == 'molecule':
-                        if molecule_printed == False:
+                        if not molecule_printed:
                             molecule_printed = True
                             if read:
                                 out.append("read")
@@ -4548,7 +4560,7 @@ class Molecule(object):
             else:
                 records.append("HETATM")
 
-        out = []
+        out = list()
         # Create the PDB header.
         out.append("REMARK   1 CREATED WITH %s %s" % (package.upper(), str(date.today())))
         if 'boxes' in self.Data:

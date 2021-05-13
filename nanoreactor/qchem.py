@@ -225,7 +225,7 @@ def get_basis(basis, molecule=None):
     """
     # Look up the basis set (string or dictionary).
     basisval = basdict.get(basis.lower(), basis)
-    if molecule != None:
+    if molecule is not None:
         elems = sorted(list(set(molecule.elem)))
         elemsort = np.argsort(np.array([Elements.index(i) for i in elems]))
         elems = [elems[i] for i in elemsort]
@@ -275,7 +275,7 @@ def prepare_template(docstring, fout, chg, mult, method, basis, epsilon=None, mo
     with open(fout, 'w') as f:
         print(docstring.format(chg=chg, mult=mult, method=method,
                                pcm=('\nsolvent_method      cosmo' if epsilon is not None else ''), basis=(
-                    basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname != None else ''))),
+                    basisname + '%s' % (('\necp                 %s' % ecpname) if ecpname is not None else ''))),
               file=f)
     # Print general basis and ECP sections to the Q-Chem template file.
     if epsilon is not None:
@@ -380,7 +380,7 @@ class QChem(object):
         # If the original input file happens to also be a Q-Chem input file,
         # then use the suffix 'qcin' add an underscore so we
         # don't accidentally overwrite our original file.
-        if qcin == None:
+        if qcin is None:
             qcin = os.path.splitext(fin)[0] + '.in'
         if qcin == fin and fin.endswith('.in'):
             self.qcin = os.path.splitext(fin)[0] + '.qcin'
@@ -394,27 +394,27 @@ class QChem(object):
         self.haveH = 0
         # Set Q-Chem calculation options ($rem variables).
         if 'qcrems' not in list(self.M.Data.keys()):
-            if method == None or basis == None or charge == None or mult == None:
+            if method is None or basis is None or charge is None or mult is None:
                 raise RuntimeError('Must provide charge/mult/method/basis!')
             # Print a Q-Chem template file.
             prepare_template(qcrem_default, '.qtemp.in', charge, mult, method, basis, molecule=self.M)
             self.M.add_quantum('.qtemp.in')
         else:
-            if charge != None:
+            if charge is not None:
                 self.M.charge = charge
-            if mult != None:
+            if mult is not None:
                 self.M.mult = mult
-            if method != None:
+            if method is not None:
                 self.M.edit_qcrems({'method': method})
             # Treat custom basis and ECP.
             ecpname = None
             ecpsect = None
-            if basis != None:
+            if basis is not None:
                 basisname, basissect, ecpname, ecpsect = get_basis(basis, self.M)
                 self.M.edit_qcrems({'basis': basisname})
                 if basisname == 'gen':
                     self.M.qctemplate['basis'] = basissect
-            if ecpname != None:
+            if ecpname is not None:
                 self.M.edit_qcrems({'ecp': ecpname})
                 if ecpname == 'gen':
                     self.M.qctemplate['ecp'] = ecpsect
@@ -426,7 +426,7 @@ class QChem(object):
         # Extra rem variables for a given job type.
         self.remextra = OrderedDict()
         # Default name of Q-Chem output file
-        self.qcout = os.path.splitext(self.qcin)[0] + ".out" if qcout == None else qcout
+        self.qcout = os.path.splitext(self.qcin)[0] + ".out" if qcout is None else qcout
         self.qcerr = os.path.splitext(self.qcin)[0] + ".err"
         # Saved Q-Chem calculations if there is more than one.
         self.qcins = []
@@ -435,7 +435,7 @@ class QChem(object):
         # Specify whether to tack "-save" onto the end of each Q-Chem call.
         self.qcsave = qcsave
         # Q-Chem scratch directory
-        self.qcdir = os.path.splitext(self.qcin)[0] + ".d" if qcdir == None else qcdir
+        self.qcdir = os.path.splitext(self.qcin)[0] + ".d" if qcdir is None else qcdir
         # Flag to read SCF guess at the first calculation
         self.readguess = readguess
         # Without guess to read from, use "scf_guess core"
@@ -1110,7 +1110,7 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
                 # Run frequency calculation to start off IRC!
                 print("Final frequency calculation.")
                 QCTS.freq()
-                if vout != None: QCTS.write_vdata(vout)
+                if vout is not None: QCTS.write_vdata(vout)
             break
         print("Ensuring HF/KS stability of optimized structure.")
         QCTS.make_stable()
@@ -1119,7 +1119,7 @@ def QChemTS(xyz, charge, mult, method, basis, initial_stable=True, final_stable=
                 # Run frequency calculation to start off IRC!
                 print("HF/KS stable; final frequency calculation.")
                 QCTS.freq()
-                if vout != None: QCTS.write_vdata(vout)
+                if vout is not None: QCTS.write_vdata(vout)
             else:
                 print("HF/KS stable")
             break
@@ -1157,7 +1157,7 @@ def ProcessIRC(IRCData, xyz0=None):
 
     # First get RMSD of IRC endpoints to the string endpoints.
     # Reverse the string if the sum of the RMSDs is smaller for the reversed string.
-    if xyz0 != None:
+    if xyz0 is not None:
         S = Molecule(xyz0, ftype='xyz')
         RMSD1 = GetRMSD(S, 0, IRCData['X'][0]) + GetRMSD(S, -1, IRCData['X'][-1])
         RMSD2 = GetRMSD(S, 0, IRCData['X'][-1]) + GetRMSD(S, -1, IRCData['X'][0])
@@ -1237,7 +1237,7 @@ def QChemIRC(xyz, charge, mult, method, basis, qcdir, qcin='qcirc.in', xyz0=None
         QCIRC.haveH = 1
         # Run IRC calculation.
         IRCOut = QCIRC.rpath(direction=1, tolerance=tol)
-        msg = []
+        msg = list()
         msg.append("IRC calculation with displacement tolerance %i." % tol)
         # If IRC fails with something like "Bad initial gradient", then quit immediately.
         if not all(['Ok' in i for i in [IRCOut['MFwd'], IRCOut['MBak']]]):

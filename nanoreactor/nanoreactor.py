@@ -180,7 +180,7 @@ def exists_at_time(e, t):
     t0 = 0
     for l, x in e:
         t1 = t0 + l
-        if t > t0 and t < t1:
+        if t0 < t < t1:
             return x
         t0 = t1
     return x

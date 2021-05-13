@@ -33,7 +33,7 @@ WQ = None
 def create_work_queue(port):
     global WQ
     # Near clone of the function in nifty.py
-    if work_queue == None:
+    if work_queue is None:
         logger.error("Cannot create Work Queue because work_queue module not found")
         raise RuntimeError
     WQ = work_queue.WorkQueue(port=port, shutdown=False)
@@ -293,7 +293,7 @@ def analyze_path(xyz, nrg, cwd, xyz0=None, label="Reaction", draw=2):
     pathP.build_topology()
     status = ''
     message = ''
-    if xyz0 != None:
+    if xyz0 is not None:
         xyz0 = os.path.join(cwd, xyz0)
         init = Molecule(xyz0, ftype='xyz')
         initR = init[0]
@@ -425,7 +425,7 @@ def parse_irc_error(log):
 
 def pid_table():
     """ Return a list of currently running process IDs. Limited to run once per ten seconds. """
-    if (pid_table.pids == None or (time.time() - pid_table.t0) > 10.0):
+    if (pid_table.pids is None or (time.time() - pid_table.t0) > 10.0):
         pid_table.pids = [int(i.strip()) for i in os.popen("ps ef | awk '/^ *[0-9]/ {print $1}'").readlines()]
         pid_table.t0 = time.time()
     return pid_table.pids
@@ -589,12 +589,12 @@ def make_task(cmd, cwd, inputs=[], outputs=[], tag=None, calc=None, verbose=0, p
     # Actually print the command to the output folder. :)
     with open(os.path.join(cwd, 'command.sh'), 'w') as f:
         print(cmd, file=f)
-    if WQ != None:
+    if WQ is not None:
         # Create and submit Work Queue Task object.
         task = work_queue.Task(cmd)
         # The task priority is either an argument or a field of the calculation object
-        if priority == None:
-            if calc != None:
+        if priority is None:
+            if calc is not None:
                 priority = calc.priority
             else:
                 priority = 0
@@ -606,24 +606,24 @@ def make_task(cmd, cwd, inputs=[], outputs=[], tag=None, calc=None, verbose=0, p
         for f in output_paths:
             task.specify_output_file(f, os.path.basename(f), cache=False)
         task.specify_algorithm(work_queue.WORK_QUEUE_SCHEDULE_FCFS)
-        if tag != None:
+        if tag is not None:
             task.specify_tag(tag)
         else:
             task.specify_tag(cmd)
         taskid = WQ.submit(task)
         # Keep track of the work queue task IDs belonging to each task
-        if calc != None:
+        if calc is not None:
             task.calc = calc
             task.calc.wqids.append(taskid)
             task.calc.saveStatus('launch')
         logger.info("\x1b[94mWQ task\x1b[0m '%s'; taskid %i priority %i" % (task.tag, taskid, priority), printlvl=3)
     else:
         # Run the calculation locally.
-        if calc != None: calc.saveStatus('launch')
+        if calc is not None: calc.saveStatus('launch')
         _exec(cmd, print_command=(verbose >= 3), persist=True, cwd=cwd)
         # After executing the task, run launch() again
         # because launch() is designed to be multi-pass.
-        if calc != None: calc.launch()
+        if calc is not None: calc.launch()
 
 
 class Calculation(object):
@@ -771,7 +771,7 @@ class Calculation(object):
         if status == 'busy':
             statout += '.%i' % os.getpid()
         # Append a status message if desired.
-        if message != None:
+        if message is not None:
             self.message = message
             statout += ' ' + message
         # Save status to disk if desired.
@@ -824,7 +824,7 @@ class Calculation(object):
         """
         # If charge and multiplicity are not explicitly provided,
         # set them by reading the comment strings.
-        if self.charge == None or self.mult == None:
+        if self.charge is None or self.mult is None:
             if 'charge' not in M.Data or 'mult' not in M.Data:
                 M.read_comm_charge_mult(verbose=(self.verbose >= 2))
             self.charge = M.charge

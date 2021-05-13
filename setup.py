@@ -2,16 +2,15 @@
 setup.py: Install nanoreactor learning script.
 """
 
+import glob
+import sys
+from distutils.core import setup  # , Extension
 
 VERSION = 4.2
 __author__ = "Lee-Ping Wang, Alexey Titov, Robert McGibbon"
 __version__ = "%.1f" % VERSION
 
-import sys
-from distutils.core import setup  # , Extension
-import glob
-
-requirements = ['numpy', 'networkx']
+requirements = ['numpy', 'networkx', 'scipy']
 
 
 # Declare the C extension modules
