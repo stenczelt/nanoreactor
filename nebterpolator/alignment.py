@@ -8,6 +8,7 @@
 
 import numpy as np
 
+
 ##############################################################################
 # Functions
 ##############################################################################
@@ -56,13 +57,13 @@ def kabsch(query, target, operator=True):
     c_query = query - m_query
     c_target = target - m_target
 
-    error_0 = np.sum(c_query**2) + np.sum(c_target**2)
+    error_0 = np.sum(c_query ** 2) + np.sum(c_target ** 2)
 
     A = np.dot(c_query.T, c_target)
     u, s, v = np.linalg.svd(A)
 
-    #d = np.diag([1, 1, np.sign(np.linalg.det(A))])
-    #print v.shape
+    # d = np.diag([1, 1, np.sign(np.linalg.det(A))])
+    # print v.shape
 
     # LPW: I encountered some mirror-imaging if this line was not included.
     if np.sign(np.linalg.det(A)) == -1:
@@ -88,6 +89,7 @@ class AlignOperator(object):
     trans : np.ndarray, ndim=2
         Translation operator
     """
+
     def __init__(self, rot, trans):
         """Create a callable AlignOperator
 
@@ -139,7 +141,7 @@ def align_trajectory(xyzlist, which='progressive'):
 
     for i in range(1, len(xyzlist)):
         if progressive:
-            target = c_xyzlist[i-i]
+            target = c_xyzlist[i - i]
         rmsd, operator = kabsch(c_xyzlist[i], target, operator=True)
         c_xyzlist[i] = operator(c_xyzlist[i])
 
@@ -154,12 +156,13 @@ if __name__ == '__main__':
     target = np.arange(N)[:, np.newaxis] * np.random.randn(N, 3)
 
     dist, op = kabsch(query, target)
-    print(('my rmsd        ', dist))
+    print('my rmsd        ', dist)
 
     from msmbuilder.metrics import RMSD
+
     _rmsdcalc = RMSD()
     t0 = RMSD.TheoData(query[np.newaxis, :, :])
     t1 = RMSD.TheoData(target[np.newaxis, :, :])
-    print(('msmbuilder rmsd', _rmsdcalc.one_to_all(t0, t1, 0)[0]))
+    print('msmbuilder rmsd', _rmsdcalc.one_to_all(t0, t1, 0)[0])
 
-    print((np.sqrt(np.sum(np.square(target - op(query))) / N)))
+    print(np.sqrt(np.sum(np.square(target - op(query))) / N))

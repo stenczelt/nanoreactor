@@ -312,9 +312,9 @@ if args.coordinate_filename:
     min_inner_radius = ipg.findminradius(args.coordinate_filename)
     inner_radius = ipg.findinnerradius(min_inner_radius, inner_volume_ratio)
     outer_radius = ipg.findouterradius(inner_radius, outer_volume_ratio)
-    print(("Recommended inner radius is " + str(inner_radius)))
-    print(("Minimum inner radius is " + str(min_inner_radius)))
-    print(("Recommended outer radius is " + str(outer_radius)))
+    print("Recommended inner radius is " + str(inner_radius))
+    print("Minimum inner radius is " + str(min_inner_radius))
+    print("Recommended outer radius is " + str(outer_radius))
 
 # need to generate mdr2list and mdk2list based on count given by user at command line
 
@@ -368,7 +368,7 @@ for mdr2 in mdr2list:
 
 log_file.close()
 
-print(("Generated " + str(file_index) + " input and run files in " + args.output_folder))
+print("Generated " + str(file_index) + " input and run files in " + args.output_folder)
 
 if args.submit_run:
-    print(("Submitted " + str(file_index) + " jobs"))
+    print("Submitted " + str(file_index) + " jobs")

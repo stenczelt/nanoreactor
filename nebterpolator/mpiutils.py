@@ -5,8 +5,9 @@
 # Imports
 ##############################################################################
 
-import sys
 import inspect
+import sys
+
 import numpy as np
 from mpi4py import MPI
 
@@ -18,6 +19,7 @@ __all__ = ['mpi_root', 'mpi_rank', 'SelectiveExecution', 'group', 'interweave']
 
 COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()
+
 
 ##############################################################################
 # Code
@@ -147,6 +149,7 @@ class SelectiveExecution(object):
 
 class mpi_root(SelectiveExecution):
     """Context manager that selectively executes its body on the root node"""
+
     def __init__(self, comm=None):
         """Open a context managert that only executes its body on the root
         node.
@@ -173,11 +176,11 @@ def main():
 
     a = None
     with mpi_root():
-        print(('Initializing a only on rank=%s' % rank))
+        print('Initializing a only on rank=%s' % rank)
         a = [1, 2, 3, 4]
     a = comm.bcast(a)
 
-    print(('RANK %s, a=%s' % (rank, a)))
+    print('RANK %s, a=%s' % (rank, a))
 
 
 if __name__ == '__main__':

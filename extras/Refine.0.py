@@ -2,8 +2,6 @@
 
 import argparse
 import glob
-import itertools
-from collections import defaultdict
 
 import work_queue
 
@@ -153,7 +151,7 @@ if args.qa or args.qg or args.qt or args.qf:
     wq = work_queue.WorkQueue(port=args.p, exclusive=False, shutdown=False)
     wq.specify_keepalive_interval(8640000)
     wq.specify_name('nanoreactor')
-    print(('Work Queue named %s listening on %d' % (wq.name, wq.port)))
+    print('Work Queue named %s listening on %d' % (wq.name, wq.port))
     RUN = True
 
 
@@ -342,22 +340,22 @@ def get_valid(dnm, rxnm):
         # Skip over calculations with known errors.  Return 0, which signifies that the segment is invalid.
         # The initial and final points converged to the same state.
         if os.path.exists(flog) and any(
-            ['There is nothing more to be done' in line for line in open(flog).readlines()]): return 0
+                ['There is nothing more to be done' in line for line in open(flog).readlines()]): return 0
         # The number of electrons was inconsistent with the spin-z.
         if os.path.exists(flog) and any(
-            ['inconsistent with the spin' in line for line in open(flog).readlines()]): return 0
+                ['inconsistent with the spin' in line for line in open(flog).readlines()]): return 0
         # The electronic structure calculations failed.
         if os.path.exists(flog) and any(['Too many failures' in line for line in open(flog).readlines()]): return 0
         # There are only two atoms (H2) so the contact calculation failed.
         if os.path.exists(flog) and any(
-            ['contacts must be an n x 2' in line for line in open(flog).readlines()]): return 0
+                ['contacts must be an n x 2' in line for line in open(flog).readlines()]): return 0
     return 1
 
 
 def anstat(dnm, rxnm):
     flog = os.path.join(dnm, rxnm + ".log")
     if os.path.exists(flog) and any(
-        ['converged to the same point' in line for line in open(flog).readlines()]): return 'No barrier'
+            ['converged to the same point' in line for line in open(flog).readlines()]): return 'No barrier'
     if os.path.exists(flog) and any(['inconsistent with the spin' in line for line in open(flog).readlines()]):
         return 'Charge/spin inconsistency'
     else:
@@ -751,10 +749,10 @@ def manage_ts(dts, init, lstr, Launch):
             os.chdir(dts)
             if (string and args.pic >= 2) or (not string and args.pic >= 1):
                 subprocess.call("xyzob.py %s %s %s %s %.3f %.3f %s" % (
-                "reactants.xyz", "products.xyz", "chgsel.irc.txt", "spnsel.irc.txt",
-                delta, barrier, "1" if string else ""), shell=True)
+                    "reactants.xyz", "products.xyz", "chgsel.irc.txt", "spnsel.irc.txt",
+                    delta, barrier, "1" if string else ""), shell=True)
                 print("\x1b[92mReaction saved\x1b[0m to %s/reaction.png%s" % (
-                dts, " (warning: TS from string)" if string else ""))
+                    dts, " (warning: TS from string)" if string else ""))
             os.chdir(cwd)
             if string:
                 touch("%s/TS_From_String" % dts)
@@ -792,7 +790,7 @@ def manage_ts(dts, init, lstr, Launch):
                     os.path.join(dts, ".extracted")).st_mtime
             if diff_time > 0:
                 os.system("tar xjf %s --directory %s string.irc.xyz charges.irc.txt spins.irc.txt 2> /dev/null" % (
-                os.path.join(dts, "ts_result.tar.bz2"), dts))
+                    os.path.join(dts, "ts_result.tar.bz2"), dts))
                 os.system("touch %s" % (os.path.join(dts, ".extracted")))
             # dcan = [i for i in os.listdir(dts) if 'qchem' in i]
             # for line in os.popen("tar -tf %s" % os.path.join(dts, "ts_result.tar.bz2")):
@@ -983,8 +981,8 @@ def manage_fs(d0, init):
             os.chdir(dfs)
             if args.pic >= 1:
                 subprocess.call("xyzob.py %s %s %s %s %.3f %.3f" % (
-                "reactants.xyz", "products.xyz", "chgsel.irc.txt", "spnsel.irc.txt",
-                delta, barrier), shell=True)
+                    "reactants.xyz", "products.xyz", "chgsel.irc.txt", "spnsel.irc.txt",
+                    delta, barrier), shell=True)
                 print("\x1b[92mReaction saved\x1b[0m to %s/reaction.png" % (dfs))
             os.chdir(cwd)
             return 1
@@ -1009,7 +1007,7 @@ def manage_fs(d0, init):
                     os.path.join(dfs, ".extracted")).st_mtime
             if diff_time > 0:
                 os.system("tar xjf %s --directory %s string.irc.xyz charges.irc.txt spins.irc.txt 2> /dev/null" % (
-                os.path.join(dfs, "fs_result.tar.bz2"), dfs))
+                    os.path.join(dfs, "fs_result.tar.bz2"), dfs))
                 os.system("touch %s" % (os.path.join(dfs, ".extracted")))
             # dcan = [i for i in os.listdir(dfs) if 'qchem' in i]
             # for line in os.popen("tar -tf %s" % os.path.join(dfs, "fs_result.tar.bz2")):
