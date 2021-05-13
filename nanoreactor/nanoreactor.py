@@ -20,7 +20,7 @@ from .molecule import AtomContact, BuildLatticeFromLengthsAngles, Molecule, form
 
 plt.switch_backend('agg')
 
-## Names of colors from VMD
+# Names of colors from VMD
 ColorNames = ["blue", "red", "gray", "orange", "yellow",
               "tan", "silver", "green", "none", "pink",
               "cyan", "purple", "lime", "mauve", "ochre",
@@ -683,9 +683,9 @@ class Nanoreactor(Molecule):
         *args, **kwargs :
             Positional and keyword arguments expected by the function
         """
+        t0 = time.time()
         if self.printlvl >= 0:
             print(msg + " ...", end=' ')
-            t0 = time.time()
         ret = func(*args, **kwargs)
         if self.printlvl >= 0:
             print("%.3f s" % (time.time() - t0))
@@ -1662,11 +1662,12 @@ class Nanoreactor(Molecule):
             frame = 0
             for intvl, on_off in encode(ts['raw_signal']):
                 if on_off:
-                    if (traj_color[frame:frame + intvl, atoms] != -1).any(): raise RuntimeError(
-                        'traj_color is twice assigned')
+                    if (traj_color[frame:frame + intvl, atoms] != -1).any():
+                        raise RuntimeError('traj_color is twice assigned')
                     traj_color[frame:frame + intvl, atoms] = color
                 frame += intvl
-        if (traj_color == -1).any(): raise RuntimeError('traj_color is not fully assigned')
+        if (traj_color == -1).any():
+            raise RuntimeError('traj_color is not fully assigned')
         return IsomerData, traj_color
 
     def writeReactionEvents(self):
@@ -1691,24 +1692,27 @@ class Nanoreactor(Molecule):
             p_iidx = sorted([self.TimeSeries[i]['iidx'] for i in event['molIDs'][1]])
             for iout, (r_out, p_out) in enumerate(output_iidx):
                 if (r_iidx == r_out and p_iidx == p_out) or (r_iidx == p_out and p_iidx == r_out):
-                    if self.printlvl >= 2: print("reaction ID %s repeats output id %i" % (evid, iout))
+                    if self.printlvl >= 2:
+                        print("reaction ID %s repeats output id %i" % (evid, iout))
                     event['output_id'] = iout
                     break
             else:
                 event['output_id'] = len(output_iidx)
-                if self.printlvl >= 2: print("reaction ID %s assigned output id %i" % (evid, len(output_iidx)))
+                if self.printlvl >= 2:
+                    print("reaction ID %s assigned output id %i" % (evid, len(output_iidx)))
                 output_iidx.append((r_iidx, p_iidx))
 
-        odir = 'reactions'
-        if not os.path.exists(odir):
-            os.makedirs(odir)
+        # keeping all reactions in one directory, no subdir per reaction
+        subd = 'reactions'
+        if not os.path.exists(subd):
+            os.makedirs(subd)
         # This is a double loop, first over the unique reactant/product isomer indices,
         # then over all of the reaction events that match these isomer indices.
         for iout in range(len(output_iidx)):
             repeat = 0
-            subd = os.path.join(odir, 'reaction_%03i' % iout)
             for iev, (evid, event) in enumerate(self.Events.items()):
-                if not os.path.exists(subd): os.makedirs(subd)
+                if not os.path.exists(subd):
+                    os.makedirs(subd)
                 if event['output_id'] == iout:
                     # Determine the file name
                     if repeat == 0:
@@ -1720,8 +1724,7 @@ class Nanoreactor(Molecule):
                     atoms = self.Events[evid]['atoms']  # np.array(uncommadash(evid.split(':')[1]))
                     traj_slice = self.atom_select(atoms)[fstart:fend + 1]
                     if self.printlvl >= 2:
-                        print(
-                            "Writing event ID %s, number %i, frames %i-%i to file %s" % (evid, iev, fstart, fend, fout))
+                        print(f"Writing event ID {evid}, number {iev:d}, frames {fstart:d}-{fend:d} to file {fout}")
                     elif self.printlvl >= 1:
                         print("Writing event number %i/%i, frames %i-%i to file %s : %s" % (
                             iev + 1, len(self.Events), fstart, fend, fout, self.Events[evid]['equation']))
