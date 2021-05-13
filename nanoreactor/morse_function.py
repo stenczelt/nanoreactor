@@ -4,7 +4,7 @@ from collections import OrderedDict, namedtuple
 
 import numpy as np
 
-## The periodic table with atomic masses
+# The periodic table with atomic masses
 AtomicMass = OrderedDict([('H', 1.0079), ('He', 4.0026),
                           ('Li', 6.941), ('Be', 9.0122), ('B', 10.811), ('C', 12.0107), ('N', 14.0067), ('O', 15.9994),
                           ('F', 18.9984), ('Ne', 20.1797),
@@ -32,10 +32,10 @@ AtomicMass = OrderedDict([('H', 1.0079), ('He', 4.0026),
                           ('No', 259),
                           ('Lr', 262), ('Rf', 261), ('Db', 262), ('Sg', 266), ('Bh', 264), ('Hs', 277), ('Mt', 268)])
 
-## A list of the elements.
+# A list of the elements.
 Elements = list(AtomicMass.keys())
 
-## Covalent radii from Cordero et al. 'Covalent radii revisited' Dalton Transactions 2008, 2832-2838.
+# Covalent radii from Cordero et al. 'Covalent radii revisited' Dalton Transactions 2008, 2832-2838.
 CovalentRadii = OrderedDict([(j, [0.31, 0.28,
                                   1.28, 0.96, 0.84, 0.76, 0.71, 0.66, 0.57, 0.58,
                                   1.66, 1.41, 1.21, 1.11, 1.07, 1.05, 1.02, 1.06,
@@ -50,11 +50,11 @@ CovalentRadii = OrderedDict([(j, [0.31, 0.28,
                                   2.60, 2.21, 2.15, 2.06, 2.00, 1.96, 1.90, 1.87, 1.80, 1.69][i]) for i, j in
                              list(enumerate(AtomicMass.keys()))[:96]])
 
-## Pairs of known bond energies / lengths (in wavenumbers)
-## Reference: Huheey, pps. A-21 to A-34; T.L. Cottrell, "The Strengths of Chemical Bonds," 2nd ed., Butterworths, London, 1958
-## B. deB. Darwent, "National Standard Reference Data Series," National Bureau of Standards, No. 31, Washington, DC, 1970;
-## S.W. Benson, J. Chem. Educ., 42, 502 (1965).
-## Web Site: http://www.wiredchemist.com/chemistry/data/bond_energies_lengths.html
+# Pairs of known bond energies / lengths (in wavenumbers)
+# Reference: Huheey, pps. A-21 to A-34; T.L. Cottrell, "The Strengths of Chemical Bonds," 2nd ed., Butterworths, London, 1958
+# B. deB. Darwent, "National Standard Reference Data Series," National Bureau of Standards, No. 31, Washington, DC, 1970;
+# S.W. Benson, J. Chem. Educ., 42, 502 (1965).
+# Web Site: http://www.wiredchemist.com/chemistry/data/bond_energies_lengths.html
 BondEnergyRadii = OrderedDict(
     [(('H', 'H'), (432, 74)), (('H', 'B'), (389, 119)), (('H', 'C'), (411, 109)), (('H', 'Si'), (318, 148)),
      (('H', 'Ge'), (288, 153)), (('H', 'Sn'), (251, 170)), (('H', 'N'), (386, 101)),

@@ -16,16 +16,7 @@ from numpy.linalg import multi_dot
 from pkg_resources import parse_version
 
 # For Python 3 compatibility
-try:
-    from itertools import zip_longest as zip_longest
-except ImportError:
-    from itertools import zip_longest as zip_longest
-
-# For Python 2 backwards-compatibility
-try:
-    input = raw_input
-except NameError:
-    pass
+from itertools import zip_longest as zip_longest
 
 
 # Special error which is thrown when TINKER .arc data is detected in a .xyz file
