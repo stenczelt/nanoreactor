@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import os, sys, re
 import networkx as nx
 import numpy as np
@@ -1063,7 +1063,7 @@ class Nanoreactor(Molecule):
                 ts = TimeSeries[molID]
                 atom_str, iidx_str = molID.split(':')
                 ef_str = ts['graph'].ef()
-                ts_str = ''.join([("/\u203E%i\u203E\\" % t[0]) if t[1] else ('_%i_' % t[0]) for t in encode(ts['raw_signal'])])
+                ts_str = ''.join([("/\\u203E%i\\u203E\\" % t[0]) if t[1] else ('_%i_' % t[0]) for t in encode(ts['raw_signal'])])
                 print(("molecule index %i formula %s iidx %s atoms %s series %s" % (MolIDs.index(molID), ef_str, iidx_str, atom_str, ts_str)).encode('utf-8'))
 
         return Isomers, MolIDs, TimeSeries, traj_iidx, traj_midx, traj_stable, known_iidx

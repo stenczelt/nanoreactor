@@ -20,7 +20,7 @@ string iteration.
 Also, this script ensures that every image in the growing string calculation
 uses the Q-Chem 
 """
-from __future__ import print_function
+
 import os, sys
 from nanoreactor.qchem import QChem, tarexit
 tarexit.tarfnm = "growing-string.tar.bz2"

@@ -4,7 +4,7 @@
 Run a Q-Chem geometry optimization.  Save frames where the energy is
 monotonically decreasing and save charges / spins to disk.
 """
-from __future__ import print_function
+
 #from nanoreactor import contact
 from nanoreactor.qchem import QChem, tarexit
 from nanoreactor.molecule import Molecule
@@ -94,7 +94,7 @@ def QCOptIC(*args, **kwargs):
     if len(OptOut.qcerr) == 0 or OptOut.qcerr == 'Maximum optimization cycles reached':
         return OptOut
     else:
-        print("Geometry optimization failed! (%s)" % OptOut.qcerr)
+        print(("Geometry optimization failed! (%s)" % OptOut.qcerr))
         tarexit()
 
 def main():

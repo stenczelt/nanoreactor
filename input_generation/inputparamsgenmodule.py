@@ -24,7 +24,7 @@ def mdr2listgenerator(mdr2_count_input,inner_radius,min_inner_radius):
     	for index in range(2,mdr2_count_input+1):
     		mdr2list.append(inner_radius + inner_radius*((-1)**index) * mdr2_factor * math.floor(index/2.) )
     		if (inner_radius + inner_radius*((-1)**index) * mdr2_factor * math.floor(index/2.)) < min_inner_radius:
-    			print "Error: a generated r2 corresponds to a sphere with a smaller volume than the sum of the volumes of the elements."
+    			print("Error: a generated r2 corresponds to a sphere with a smaller volume than the sum of the volumes of the elements.")
     			sys.exit(50)
     mdr2list = sorted(mdr2list)
     return mdr2list

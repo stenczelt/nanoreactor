@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 import os, sys, argparse
 from nanoreactor import Nanoreactor
 import shutil
@@ -51,7 +51,7 @@ add_argument(parser, '--radii', type=str, nargs="+", default=["Na","0.0","K","0.
 add_argument(parser, '--plot', action='store_true', help='Save interatomic distance or bond order time series to files.')
 
 print("LearnReactions.py called with the following arguments:")
-print(' '.join(sys.argv))
+print((' '.join(sys.argv)))
 print("\n#=========================================#")
 print("#       Reactive MD learning script       #")
 print("#  Use the -h argument for detailed help  #")
@@ -61,12 +61,12 @@ args = parser.parse_args()
 def main():
     if not os.path.exists(args.qsin):
         if os.path.exists(args.qsin+'.bz2'):
-            print("%s doesn't exist - unzipping %s.bz2" % (args.qsin, args.qsin))
+            print(("%s doesn't exist - unzipping %s.bz2" % (args.qsin, args.qsin)))
             os.system('bunzip2 %s.bz2' % args.qsin)
     RS = Nanoreactor(**dict(args._get_kwargs())) # _get_kwargs takes the ArgumentParser object and turns it into a dictionary
     RS.Output()
     shutil.copyfile(os.environ['PATH'].split(os.pathsep)[0] + '/reactions.vmd', './reactions.vmd')
-    print("Reaction product identification finished.  color.dat and bonds.dat generated.  Now run: vmd -e reactions.vmd -args %s" % args.xyzin)
+    print(("Reaction product identification finished.  color.dat and bonds.dat generated.  Now run: vmd -e reactions.vmd -args %s" % args.xyzin))
 
 
 if __name__ == "__main__":

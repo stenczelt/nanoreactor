@@ -6,7 +6,7 @@
 ##############################################################################
 
 # library imports
-from __future__ import print_function
+
 import numpy as np
 import sys
 from scipy.optimize import leastsq, fmin, fmin_l_bfgs_b
@@ -347,7 +347,7 @@ def least_squares_cartesian(bonds, ibonds, angles, iangles, dihedrals,
         for i in range(len(x0)):
             FDGrad = f1d7p(fdwrap(x0, i), h=0.0001)
             print("%i % .4f % .4f % .4f" % (i, AGrad[i], FDGrad, FDGrad - AGrad[i]))
-        input()
+        eval(input())
     #====
     # End finite difference code
     #====
@@ -371,7 +371,7 @@ def least_squares_cartesian(bonds, ibonds, angles, iangles, dihedrals,
         FDGrad = np.array([f1d7p(fdwrap(xf, i), h=0.0001) for i in range(len(xf))])
         print("Analytic Gradient (Final):", AGrad)
         print("Error in Gradient:", FDGrad - AGrad)
-        input()
+        eval(input())
     xyz_final = independent_vars_to_xyz(xf)
     return xyz_final, ff
 

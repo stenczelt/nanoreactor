@@ -1,6 +1,6 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
+
+
 
 import copy
 import imp
@@ -24,7 +24,7 @@ from pkg_resources import parse_version
 try:
     from itertools import zip_longest as zip_longest
 except ImportError:
-    from itertools import izip_longest as zip_longest
+    from itertools import zip_longest as zip_longest
 
 # For Python 2 backwards-compatibility
 try:
@@ -295,7 +295,7 @@ PeriodicTable = OrderedDict([("H", 1.007975), ("He", 4.002602), # First row
 #                              ('Lr' , 262), ('Rf' , 261), ('Db' , 262), ('Sg' , 266), ('Bh' , 264), ('Hs' , 277), ('Mt' , 268)])
 
 def getElement(mass):
-    return PeriodicTable.keys()[np.argmin([np.abs(m-mass) for m in PeriodicTable.values()])]
+    return list(PeriodicTable.keys())[np.argmin([np.abs(m-mass) for m in list(PeriodicTable.values())])]
 
 def elem_from_atomname(atomname):
     """ Given an atom name, attempt to get the element in most cases. """
@@ -1268,7 +1268,7 @@ class Molecule(object):
             ## Actually read the file.
             Parsed = self.Read_Tab[self.Funnel[ftype.lower()]](fnm, **kwargs)
             ## Set member variables.
-            for key, val in Parsed.items():
+            for key, val in list(Parsed.items()):
                 self.Data[key] = val
             ## Create a list of comment lines if we don't already have them from reading the file.
             if 'comms' not in self.Data:
@@ -1735,7 +1735,7 @@ class Molecule(object):
                 logger.error('When loading frames, don\'t change the number of atoms\n')
                 raise RuntimeError
             ## Set member variables.
-            for key, val in Parsed.items():
+            for key, val in list(Parsed.items()):
                 if key in FrameVariableNames:
                     self.Data[key] = val
             ## Create a list of comment lines if we don't already have them from reading the file.
@@ -1748,13 +1748,13 @@ class Molecule(object):
         """ Edit Q-Chem rem variables with a dictionary.  Pass a value of None to delete a rem variable. """
         if subcalc is None:
             for qcrem in self.qcrems:
-                for key, val in in_dict.items():
+                for key, val in list(in_dict.items()):
                     if val is None:
                         qcrem.pop(key, None)
                     else:
                         qcrem[key] = val
         else:
-            for key, val in in_dict.items():
+            for key, val in list(in_dict.items()):
                 if val is None:
                     self.qcrems[subcalc].pop(key, None)
                 else:
@@ -2027,7 +2027,7 @@ class Molecule(object):
             ygrd = np.arange(ymin, ymax-gszy, gszy)
             zgrd = np.arange(zmin, zmax-gszz, gszz)
             # 2) Grid cells are denoted by a three-index tuple.
-            gidx = list(itertools.product(range(len(xgrd)), range(len(ygrd)), range(len(zgrd))))
+            gidx = list(itertools.product(list(range(len(xgrd))), list(range(len(ygrd))), list(range(len(zgrd)))))
             # 3) Build a dictionary which maps a grid cell to itself plus its neighboring grid cells.
             # Two grid cells are defined to be neighbors if the differences between their x, y, z indices are at most 1.
             gngh = OrderedDict()
@@ -2085,7 +2085,7 @@ class Molecule(object):
         else:
             # Create a list of 2-tuples corresponding to combinations of atomic indices.
             # This is much faster than using itertools.combinations.
-            AtomIterator = np.ascontiguousarray(np.vstack((np.fromiter(itertools.chain(*[[i]*(self.na-i-1) for i in range(self.na)]),dtype=np.int32), np.fromiter(itertools.chain(*[range(i+1,self.na) for i in range(self.na)]),dtype=np.int32))).T)
+            AtomIterator = np.ascontiguousarray(np.vstack((np.fromiter(itertools.chain(*[[i]*(self.na-i-1) for i in range(self.na)]),dtype=np.int32), np.fromiter(itertools.chain(*[list(range(i+1,self.na)) for i in range(self.na)]),dtype=np.int32))).T)
 
         # Create a list of thresholds for determining whether a certain interatomic distance is considered to be a bond.
         BT0 = R[AtomIterator[:,0]]
@@ -2114,7 +2114,7 @@ class Molecule(object):
             for j in bi:
                 if i == j: continue
                 # Do not add a bond between resids if fragment is set to True.
-                if self.top_settings['fragment'] and 'resid' in self.Data.keys() and self.resid[i] != self.resid[j] : continue
+                if self.top_settings['fragment'] and 'resid' in list(self.Data.keys()) and self.resid[i] != self.resid[j] : continue
                 elif i < j:
                     bondlist.append((i, j))
                 else:
@@ -2178,7 +2178,7 @@ class Molecule(object):
     def distance_matrix(self, pbc=True):
         """ Obtain distance matrix between all pairs of atoms. """
         AtomIterator = np.ascontiguousarray(np.vstack((np.fromiter(itertools.chain(*[[i]*(self.na-i-1) for i in range(self.na)]),dtype=np.int32),
-                                                       np.fromiter(itertools.chain(*[range(i+1,self.na) for i in range(self.na)]),dtype=np.int32))).T)
+                                                       np.fromiter(itertools.chain(*[list(range(i+1,self.na)) for i in range(self.na)]),dtype=np.int32))).T)
         if hasattr(self, 'boxes') and pbc:
             boxes = np.array([[self.boxes[i].a, self.boxes[i].b, self.boxes[i].c] for i in range(len(self))])
             drij = AtomContact(np.array(self.xyzs), AtomIterator, box=boxes)
@@ -2189,7 +2189,7 @@ class Molecule(object):
     def distance_displacement(self):
         """ Obtain distance matrix and displacement vectors between all pairs of atoms. """
         AtomIterator = np.ascontiguousarray(np.vstack((np.fromiter(itertools.chain(*[[i]*(self.na-i-1) for i in range(self.na)]),dtype=np.int32),
-                                                       np.fromiter(itertools.chain(*[range(i+1,self.na) for i in range(self.na)]),dtype=np.int32))).T)
+                                                       np.fromiter(itertools.chain(*[list(range(i+1,self.na)) for i in range(self.na)]),dtype=np.int32))).T)
         if hasattr(self, 'boxes') and pbc:
             boxes = np.array([[self.boxes[i].a, self.boxes[i].b, self.boxes[i].c] for i in range(len(self))])
             drij, dxij = AtomContact(np.array(self.xyzs), AtomIterator, box=boxes, displace=True)
@@ -2315,7 +2315,7 @@ class Molecule(object):
             AtomIterator = np.ascontiguousarray([[min(g), max(g)] for g in itertools.product(groups[0], groups[1])])
         else:
             AtomIterator = np.ascontiguousarray(np.vstack((np.fromiter(itertools.chain(*[[i]*(self.na-i-1) for i in range(self.na)]),dtype=np.int32),
-                                                           np.fromiter(itertools.chain(*[range(i+1,self.na) for i in range(self.na)]),dtype=np.int32))).T)
+                                                           np.fromiter(itertools.chain(*[list(range(i+1,self.na)) for i in range(self.na)]),dtype=np.int32))).T)
         ang13 = [(min(a[0], a[2]), max(a[0], a[2])) for a in self.find_angles()]
         dih14 = [(min(d[0], d[3]), max(d[0], d[3])) for d in self.find_dihedrals()]
         bondedPairs = np.where([tuple(aPair) in (self.bonds+ang13+dih14) for aPair in AtomIterator])[0]
@@ -3732,9 +3732,9 @@ class Molecule(object):
         matblank   = {'match' : '', 'All' : [], 'This' : [], 'Strip' : [], 'Mode' : 0}
         Mats      = {}
         Floats    = {}
-        for key, val in matrix_match.items():
+        for key, val in list(matrix_match.items()):
             Mats[key] = copy.deepcopy(matblank)
-        for key, val in float_match.items():
+        for key, val in list(float_match.items()):
             Floats[key] = []
 
         ## Detect freezing string
@@ -3814,7 +3814,7 @@ class Molecule(object):
                     MMode = 0
             elif re.match("Ground-State Mulliken Net Atomic Charges".lower(), line.lower()):
                 MMode = 1
-            for key, val in float_match.items():
+            for key, val in list(float_match.items()):
                 if re.match(val[0].lower(), line.lower()):
                     Floats[key].append(float(line.split()[val[1]]))
             #----- Begin Intrinsic reaction coordinate stuff
@@ -3903,7 +3903,7 @@ class Molecule(object):
                     for i in range(nfrq):
                         readmodes[i].append([float(s[j]) for j in range(1+3*i,4+3*i)])
             if VModeNxt is not None: VMode = VModeNxt
-            for key, val in matrix_match.items():
+            for key, val in list(matrix_match.items()):
                 if Mats[key]["Mode"] >= 1:
                     # Match any number of integers on a line.  This signifies a column header to start the matrix
                     if re.match("^[0-9]+( +[0-9]+)*$",line):
@@ -4107,7 +4107,7 @@ class Molecule(object):
                                         out.append(pre + format_xyz_coord(e, x) + suf)
                                         an += 1
                     if SectName == 'rem':
-                        for key, val in self.qcrems[remidx].items():
+                        for key, val in list(self.qcrems[remidx].items()):
                             out.append("%-21s %-s" % (key, str(val)))
                     if SectName == 'comments' and 'comms' in self.Data:
                         out.append(self.comms[I])
@@ -4167,14 +4167,14 @@ class Molecule(object):
         atmap = OrderedDict()
         for i in range(self.na):
             if self.elem[i] not in atmap:
-                atmap[self.elem[i]] = len(atmap.keys()) + 1
+                atmap[self.elem[i]] = len(list(atmap.keys())) + 1
 
         # First line is a comment
         out.append(comm)
         out.append("")
         # Next, print the number of atoms and atom types
         out.append("%i atoms" % self.na)
-        out.append("%i atom types" % len(atmap.keys()))
+        out.append("%i atom types" % len(list(atmap.keys())))
         out.append("")
         # Next, print the simulation box
         # We throw an error if the atoms are outside the simulation box
@@ -4518,7 +4518,7 @@ class Molecule(object):
 
     def require_resid(self):
         if 'resid' not in self.Data:
-            na_res = int(input("Enter how many atoms are in a residue, or zero as a single residue -> "))
+            na_res = int(eval(input("Enter how many atoms are in a residue, or zero as a single residue -> ")))
             if na_res == 0:
                 self.resid = [1 for i in range(self.na)]
             else:
@@ -4526,7 +4526,7 @@ class Molecule(object):
 
     def require_resname(self):
         if 'resname' not in self.Data:
-            resname = input("Enter a residue name (3-letter like 'SOL') -> ")
+            resname = eval(input("Enter a residue name (3-letter like 'SOL') -> "))
             self.resname = [resname for i in range(self.na)]
 
     def require_boxes(self):
@@ -4572,7 +4572,7 @@ class Molecule(object):
             sys.stderr.write("6 floats (triclinic lattice lengths and angles in degrees)\n")
             sys.stderr.write("9 floats (triclinic lattice vectors v1(x) v2(y) v3(z) v1(y) v1(z) v2(x) v2(z) v3(x) v3(y) in Angstrom)\n")
             sys.stderr.write("Or: Name of a file containing one of these lines for each frame in the trajectory\n")
-            boxstr = input("Box Vector Input: -> ")
+            boxstr = eval(input("Box Vector Input: -> "))
             if os.path.exists(boxstr):
                 boxfile = open(boxstr).readlines()
                 if len(boxfile) != len(self):

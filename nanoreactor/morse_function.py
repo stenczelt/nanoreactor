@@ -1,5 +1,5 @@
 """ Calculate the pairwise Morse potential between all pairs of atoms in a frame.  Used as an energy function to prevent atom clashes. """
-from __future__ import print_function, division
+
 import os, sys
 import itertools
 import numpy as np

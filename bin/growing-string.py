@@ -6,7 +6,7 @@ growing-string.py
 Starting from an initial .xyz file with an initial pathway
 perform a growing string calculation.
 """
-from __future__ import print_function
+
 from nanoreactor.molecule import Molecule
 from nanoreactor.qchem import tarexit, prepare_template, qcrem_default
 from nanoreactor.nifty import _exec

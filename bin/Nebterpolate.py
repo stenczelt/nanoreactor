@@ -4,7 +4,7 @@
 #| Imports |#
 #===========#
 
-from __future__ import print_function
+
 from nebterpolator.io import XYZFile
 from nebterpolator.path_operations import smooth_internal, smooth_cartesian, equal_velocity
 import os, sys, argparse, shutil
@@ -30,7 +30,7 @@ if len(sys.argv) > 2:
     output_filename = sys.argv[2]
 else:
     output_filename = os.path.splitext(sys.argv[1])[0]+"_out.xyz"
-    print("Supplying default output filename", output_filename)
+    print(("Supplying default output filename", output_filename))
 nm_in_angstrom = 0.1
 
 #-----
@@ -72,7 +72,7 @@ if smoothing_width == -1 or smoothing_width > len(xyzlist):
     smoothing_width -= 1
 if smoothing_width%2 != 1:
     smoothing_width -= 1
-    print("Smoothing width must be an odd number - changing to %i" % smoothing_width)
+    print(("Smoothing width must be an odd number - changing to %i" % smoothing_width))
 
 #-----
 # Transform into redundant internal coordinates, apply a Fourier based
@@ -113,7 +113,7 @@ while True:
                                        dihedral_width = smoothing_width, allpairs=args.allpairs, w_morse = args.morse, rep=args.repulsive, 
                                        anchor=args.anchor, window=args.window)
     if errors[-1] > 1e-3:
-        print("\x1b[1;91mRedoing reverse path!\x1b[0m (errors[-1]=%f)" % errors[-1])
+        print(("\x1b[1;91mRedoing reverse path!\x1b[0m (errors[-1]=%f)" % errors[-1]))
         smoothed_, errors_ = try_smooth_internal(xyzlist[::-1], atom_names, width=smoothing_width, bond_width=smoothing_width, angle_width = smoothing_width, 
                                              dihedral_width = smoothing_width, allpairs=args.allpairs, w_morse = args.morse, rep=args.repulsive, 
                                              anchor=args.anchor, window=args.window, xyzlist_match = smoothed[::-1])
@@ -121,7 +121,7 @@ while True:
             smoothing_width = int(smoothing_width*0.5)
             if smoothing_width%2 == 0:
                 smoothing_width += 1
-            print("\x1b[1;91mDecreasing smoothing width to %i!\x1b[0m" % smoothing_width)
+            print(("\x1b[1;91mDecreasing smoothing width to %i!\x1b[0m" % smoothing_width))
         else:
             smoothed = smoothed_[::-1]
             print("\x1b[92mFinished (reverse)\x1b[0m")
@@ -130,7 +130,7 @@ while True:
         print("\x1b[92mFinished (forward)\x1b[0m")
         break
 
-print('Saving output to', output_filename)
+print(('Saving output to', output_filename))
 
 #-----
 # The cartesian smoothing step optionally runs after the internal coordinates 

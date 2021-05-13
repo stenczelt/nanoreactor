@@ -63,8 +63,8 @@ class Chunk(object):
                         self.havedata = True
                     # ssq = float(line.split()[2]) # What is this?
                     efict = 0.0
-        self.fseq = self.frames.keys()
-        if self.havedata and (self.fseq != range(self.fseq[0], self.fseq[-1]+1)):
+        self.fseq = list(self.frames.keys())
+        if self.havedata and (self.fseq != list(range(self.fseq[0], self.fseq[-1]+1))):
             raise RuntimeError("Sequence of frames is not contiguous")
 
     def __repr__(self):
@@ -89,7 +89,7 @@ class Chunk(object):
             obo = open(os.path.join("gathered", "bond_order.list"), mode=mode)
         if start == -1: start = self.fseq[0]
         if end == -1: end = self.fseq[-1]+1
-        fkeep = range(start, end)
+        fkeep = list(range(start, end))
         while True:
             if len(fkeep) == 0: break
             xyzframe = list(islice(fxyz, self.na+2))
@@ -113,7 +113,7 @@ class Chunk(object):
                     popframe.append("%-5s % 11.6f % 11.6f 0\n" % (self.elem[i],chg[i],spn[i]))
                 opop.writelines(popframe)
                 if have_bo: obo.writelines(boframe)
-                print "\rWriting frame %i      " % fnum,
+                print("\rWriting frame %i      " % fnum, end=' ')
             if fnum == fkeep[-1]: break
         fxyz.close()
         oxyz.close()
@@ -129,12 +129,12 @@ def main():
         chunk = Chunk("chunk_%04i" % cnum)
         if not chunk.havedata: break
         chunks.append(chunk)
-        print chunk
+        print(chunk)
         cnum += 1
     for i in range(len(chunks)-1):
         framedata += chunks[i].writexyz(start=chunks[i].fseq[0], end=chunks[i+1].fseq[0], mode='w' if i == 0 else 'a')
     framedata += chunks[-1].writexyz(mode='a')
-    fdata_arr = np.array([[]+d.values() for d in framedata])
+    fdata_arr = np.array([[]+list(d.values()) for d in framedata])
 
     np.savetxt(os.path.join("gathered", "properties.txt"), fdata_arr, fmt="%7i %11.3f %11.6f % 14.6f % 14.6f % 11.6f % 14.6f % 14.6f",
                header="%5s %11s %11s %14s %14s %11s %14s %14s" % ("Frame", "Time(fs)", "S-squared", "Temperature", "Potential", "Kinetic", "Electron-KE", "Total-Energy"))

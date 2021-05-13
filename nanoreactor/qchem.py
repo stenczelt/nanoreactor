@@ -10,7 +10,7 @@ a Molecule object.
 Also contains a number of functions to wrap around TS/IRC calculations and
 make the results easier to use.
 """
-from __future__ import print_function
+
 import os, sys, shutil, glob
 import traceback
 import time

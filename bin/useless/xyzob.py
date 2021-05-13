@@ -50,9 +50,9 @@ def subscripts(string):
                         '3': 8323, '4': 8324, '5': 8325,
                         '6': 8326, '7': 8327, '8': 8328,
                         '9': 8329}
-    ustr = unicode(string)
+    ustr = str(string)
     for i in unicode_integers:
-        ustr = ustr.replace(i, unichr(unicode_integers[i]))
+        ustr = ustr.replace(i, chr(unicode_integers[i]))
     return ustr
 
 def round_array(arr):
@@ -213,7 +213,7 @@ os.system("convert -roll +0-60 .tmp.png -draw \'line %i,%i %i,%i\' -gravity Cent
 cmd="composite rc.png .tmp1.png -gravity south .tmp11.png"
 os.system(cmd)
 
-cmd=u"convert .tmp11.png -gravity South -background Orange -font Adobe-Garamond-Pro-Regular -pointsize 30 -splice 0x36 -annotate +0+3 \'%s ---> %s\' .tmp2.png" % (efs0, efs1)
+cmd="convert .tmp11.png -gravity South -background Orange -font Adobe-Garamond-Pro-Regular -pointsize 30 -splice 0x36 -annotate +0+3 \'%s ---> %s\' .tmp2.png" % (efs0, efs1)
 
 os.system(cmd.encode('utf-8'))
 
@@ -221,7 +221,7 @@ chg = int(round(sum(rchg)))
 mult = int(round(np.abs(sum(rspn)))) + 1
 
 os.system("convert .tmp2.png -gravity South -background YellowGreen -font Adobe-Garamond-Pro-Regular -pointsize 30 -splice 0x36 -annotate +0+3 \'%s\' .tmp3.png" % ("Charge = %i ; Multiplicity = %i" % (chg, mult)))
-cmd=u"convert .tmp3.png -gravity South -background DodgerBlue -font Adobe-Garamond-Pro-Regular -pointsize 30 -splice 0x36 -annotate +0+3 \'%sE = %.2f kcal ; Barrier = %.2f kcal%s\' reaction.png" % (unichr(916), delta, barrier, "*" if asterisk else "")
+cmd="convert .tmp3.png -gravity South -background DodgerBlue -font Adobe-Garamond-Pro-Regular -pointsize 30 -splice 0x36 -annotate +0+3 \'%sE = %.2f kcal ; Barrier = %.2f kcal%s\' reaction.png" % (chr(916), delta, barrier, "*" if asterisk else "")
 os.system(cmd.encode('utf-8'))
 
 # for b in R.bonds:

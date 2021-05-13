@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 import os, sys, math, re
 import numpy as np
 from itertools import islice

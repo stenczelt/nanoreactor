@@ -23,7 +23,7 @@ def __bond_angles(xyzlist, angle_indices):
     n_frames = xyzlist.shape[0]
     angles = np.zeros((n_frames, len(angle_indices)))
 
-    for i in xrange(n_frames):
+    for i in range(n_frames):
         for j, (m, o, n) in enumerate(angle_indices):
             u_prime = xyzlist[i, m, :] - xyzlist[i, o, :]
             v_prime = xyzlist[i, n, :] - xyzlist[i, o, :]

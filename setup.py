@@ -1,7 +1,7 @@
 """
 setup.py: Install nanoreactor learning script.
 """
-from __future__ import print_function
+
 
 VERSION = 4.2
 __author__ = "Lee-Ping Wang, Alexey Titov, Robert McGibbon"

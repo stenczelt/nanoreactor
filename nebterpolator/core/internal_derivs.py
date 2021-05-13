@@ -6,7 +6,7 @@ Numpy routines to calculate the analytical derivatives of internal coordinates
 ##############################################################################
 # Imports
 ##############################################################################
-from __future__ import print_function
+
 import numpy as np
 
 ##############################################################################

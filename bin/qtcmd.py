@@ -29,7 +29,7 @@
 #| The .chunk file should be 1 higher than the highest chunk_xxxx folder |#
 #|                                                                       |#
 #=========================================================================#
-from __future__ import print_function
+
 import os
 import re
 import argparse

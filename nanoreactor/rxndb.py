@@ -3,7 +3,7 @@
 #|     managing database of reactions      |#
 #|  Authors: Lee-Ping Wang, Leah Bendavid  |#
 #===========================================#
-from __future__ import print_function
+
 import os, sys, re, shutil, time
 import numpy as np
 import argparse

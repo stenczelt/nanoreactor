@@ -14,9 +14,9 @@ Named after the mighty Sniffy Handy Nifty (King Sniffy)
 @author Lee-Ping Wang
 @date 2018-03-10
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
+
+
 
 import filecmp
 import itertools
@@ -34,7 +34,7 @@ from numpy.linalg import multi_dot
 try:
     from itertools import zip_longest as zip_longest
 except ImportError:
-    from itertools import izip_longest as zip_longest
+    from itertools import zip_longest as zip_longest
 import threading
 from pickle import Pickler, Unpickler
 import tarfile
@@ -261,7 +261,7 @@ def uncommadash(s):
                 else:
                     logger.warning("Second number cannot be smaller than first: %d %d\n" % (a, b))
                 raise
-            newL = range(a,b)
+            newL = list(range(a,b))
             if any([i in L for i in newL]):
                 logger.warning("Duplicate entries found in list\n")
                 raise

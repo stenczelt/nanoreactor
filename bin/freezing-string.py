@@ -15,7 +15,7 @@ Freezing string results are saved to file as stringfile.txt and Vfile.txt (Q-Che
 IRC results are saved to file as irc.xyz (coordinates), irc.pop (charge and spin populations), 
 irc.nrg (arc length vs. energy) and irc_spaced.xyz (equally spaced coordinates).
 """
-from __future__ import print_function
+
 from nanoreactor.molecule import Molecule, arc
 from nanoreactor.qchem import QChem, QChemTS, QChemIRC, SpaceIRC, tarexit
 from nanoreactor.nifty import _exec

@@ -6,7 +6,7 @@ coordinates (bonds, angles, dihedrals) with respect to cartesian coordinates
 ##############################################################################
 # Imports
 ##############################################################################
-from __future__ import print_function
+
 import numpy as np
 
 from . import internal
