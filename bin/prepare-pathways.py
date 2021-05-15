@@ -12,8 +12,9 @@ import numpy as np
 # New imports so process_spins will work
 from nanoreactor.molecule import Elements, Molecule, extract_int
 from nanoreactor.output import logger
+from nanoreactor.reaction_ase_compatible import ProcessTrajectory
 # Utility functions and classes used to be a part of this script
-from nanoreactor.rxndb import Trajectory, create_work_queue, get_trajectory_home, parse_input_files, wq_reactor
+from nanoreactor.rxndb import create_work_queue, get_trajectory_home, parse_input_files, wq_reactor
 
 
 # ================================================================#
@@ -142,15 +143,15 @@ def main():
         xyz = trajectory_fnms[ixyz]
         xyzhome = get_trajectory_home(xyz)
         xyzname = xyzhome.replace(os.getcwd(), '').strip('/')
-        Trajectories[xyzname] = Trajectory(xyz, xyzhome, name=xyzname, methods=args.methods, bases=args.bases,
-                                           subsample=args.subsample, fast_restart=args.fast_restart,
-                                           read_only=args.read_only,
-                                           verbose=args.verbose, images=args.images, dynmax=args.dynmax,
-                                           atomax=args.atomax,
-                                           pathmax=args.pathmax, priority=10 * (len(trajectory_fnms) - i),
-                                           draw=args.draw,
-                                           gsmax=args.gsmax, trivial=args.trivial, ts_branch=args.ts_branch,
-                                           spectators=args.spectators)
+        Trajectories[xyzname] = ProcessTrajectory(xyz, xyzhome, name=xyzname, methods=args.methods, bases=args.bases,
+                                                  subsample=args.subsample, fast_restart=args.fast_restart,
+                                                  read_only=args.read_only,
+                                                  verbose=args.verbose, images=args.images, dynmax=args.dynmax,
+                                                  atomax=args.atomax,
+                                                  pathmax=args.pathmax, priority=10 * (len(trajectory_fnms) - i),
+                                                  draw=args.draw,
+                                                  gsmax=args.gsmax, trivial=args.trivial, ts_branch=args.ts_branch,
+                                                  spectators=args.spectators)
         Trajectories[xyzname].launch()
         # Enter the reactor loop once in a while so we don't waste
         # time during the setup phase.
