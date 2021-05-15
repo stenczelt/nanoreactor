@@ -26,8 +26,9 @@ Pathway() is called:
 - 21 interspaced.xyz : re-spaced version of the output of nebterpolation
 
 """
+import os
 
-from .rxndb import Pathway, Trajectory
+from .rxndb import Calculation, Pathway, Trajectory
 
 
 class PreparePathway(Pathway):
@@ -37,6 +38,13 @@ class PreparePathway(Pathway):
     def launch_fs(self):
         # we are skipping this for this implementation
         pass
+
+    def launch_gs(self, inter_spaced):
+        if not hasattr(self, 'GS'):
+            self.GS = GrowingString(inter_spaced, home=os.path.join(self.home, 'GS'),
+                                    parent=self, charge=self.charge, mult=self.mult,
+                                    stability_analysis=True, priority=self.priority, **self.kwargs)
+            self.GS.launch()
 
 
 class ProcessTrajectory(Trajectory):
@@ -48,3 +56,9 @@ class ProcessTrajectory(Trajectory):
 
     def _create_pathway_object(self, *args, **kwargs):
         return PreparePathway(*args, **kwargs)
+
+
+class GrowingString(Calculation):
+
+    def launch_(self):
+        raise NotImplementedError

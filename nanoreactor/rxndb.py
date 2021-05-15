@@ -1493,6 +1493,22 @@ class Pathway(Calculation):
                                      charge=self.charge, mult=self.mult, priority=self.priority + 100, **self.kwargs)
             self.FS.launch()
 
+    def launch_gs(self, inter_spaced):
+        # Create growing string calculation.  These calculations are
+        # run in segments and can be extended based on the status of
+        # the last growing string calculation.
+        # if not hasattr(self, 'GS'):
+        #    # With MPI, stability analysis is quite affordable so we'll enable it by default
+        #    self.GS = GrowingString(InterSpaced, home=os.path.join(self.home, 'GS'),
+        #                            parent=self, charge=self.charge, mult=self.mult,
+        #                            stability_analysis=True, priority=self.priority, **self.kwargs)
+        #    self.GS.launch()
+        #    # self.GSSA = GrowingString(InterSpaced, home=os.path.join(self.home, 'GSSA'),
+        #    #                         parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
+        #    # self.GSSA.launch()
+
+        pass
+
     def launch_(self):
         """
         Launch pathway-based calculations.
@@ -1575,17 +1591,8 @@ class Pathway(Calculation):
         else:
             InterSpaced = os.path.join(self.home, 'interspaced.xyz')
 
-        # Create growing string calculation.  These calculations are
-        # run in segments and can be extended based on the status of
-        # the last growing string calculation.
-        # if not hasattr(self, 'GS'):
-        #    # With MPI, stability analysis is quite affordable so we'll enable it by default
-        #    self.GS = GrowingString(InterSpaced, home=os.path.join(self.home, 'GS'),
-        #                            parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
-        #    self.GS.launch()
-        #    # self.GSSA = GrowingString(InterSpaced, home=os.path.join(self.home, 'GSSA'),
-        #    #                         parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
-        #    # self.GSSA.launch()
+        # GS refactored into a method for modularity and subclassing
+        self.launch_gs(InterSpaced)
 
 
 class Trajectory(Calculation):
