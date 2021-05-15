@@ -4,7 +4,6 @@
 # |  Authors: Lee-Ping Wang, Leah Bendavid  |#
 # ===========================================#
 
-
 # json is used for saving dictionaries to file.
 import json
 import os
@@ -1482,12 +1481,21 @@ class Pathway(Calculation):
         return sum([calc.status == 'converged' for calc in list(self.Optimizations.values())]), len(
             list(self.Optimizations.values()))
 
-    def _launch_m1(self):
-        """Creation of the M1 molecule object,
-        this should be called from self.launch_()
+    def launch_fs(self):
+        # Create freezing string calculation.
+        if not hasattr(self, 'FS'):
+            self.FS = FreezingString(self.M1, home=os.path.join(self.home, 'FS'),
+                                     charge=self.charge, mult=self.mult, priority=self.priority + 100, **self.kwargs)
+            self.FS.launch()
 
-        refactored for easier subclassing
+    def launch_(self):
         """
+        Launch pathway-based calculations.
+        """
+
+        # Equally spaced .xyz file with re-optimized endpoints.
+        self.M1 = os.path.join(self.home, 'respaced.xyz')
+
         # If this file does not exist, then we need to create it.
         if not os.path.exists(self.M1):
             # Read in the Molecule object, and set charge / multiplicity.
@@ -1540,21 +1548,18 @@ class Pathway(Calculation):
             else:
                 return
 
-    def _launch_fs(self):
-        # Create freezing string calculation.
-        if not hasattr(self, 'FS'):
-            self.FS = FreezingString(self.M1, home=os.path.join(self.home, 'FS'),
-                                     charge=self.charge, mult=self.mult, priority=self.priority + 100, **self.kwargs)
-            self.FS.launch()
+        # more modularity here
+        self.launch_fs()
 
-    def _launch_interpolation(self):
         # Create internal coordinate interpolation.
         if not hasattr(self, 'Interpolation'):
             self.Interpolation = Interpolation(self.M1, home=self.home, parent=self, priority=self.priority + 1000,
                                                **self.kwargs)
             self.Interpolation.launch()
 
-    def _launch_interspaced(self):
+        if self.Interpolation.status != 'complete':
+            return
+
         # Obtain equally-spaced, interpolated frames for growing string.
         if not os.path.exists(os.path.join(self.home, 'interspaced.xyz')):
             Interpolated = Molecule(os.path.join(self.home, 'interpolated.xyz'))
@@ -1563,40 +1568,17 @@ class Pathway(Calculation):
         else:
             InterSpaced = os.path.join(self.home, 'interspaced.xyz')
 
-        # this is kept because uses the `InterSpaced` variable, but it is commented out old code that could just be
-        # accessed from GIT if needed, so should remove it later
-
         # Create growing string calculation.  These calculations are
         # run in segments and can be extended based on the status of
         # the last growing string calculation.
         # if not hasattr(self, 'GS'):
         #    # With MPI, stability analysis is quite affordable so we'll enable it by default
         #    self.GS = GrowingString(InterSpaced, home=os.path.join(self.home, 'GS'),
-        #                            parent=self, charge=self.charge, mult=self.mult,
-        #                            stability_analysis=True, priority=self.priority, **self.kwargs)
+        #                            parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
         #    self.GS.launch()
         #    # self.GSSA = GrowingString(InterSpaced, home=os.path.join(self.home, 'GSSA'),
-        #    #                         parent=self, charge=self.charge, mult=self.mult,
-        #    #                         stability_analysis=True, priority=self.priority, **self.kwargs)
+        #    #                         parent=self, charge=self.charge, mult=self.mult, stability_analysis=True, priority=self.priority, **self.kwargs)
         #    # self.GSSA.launch()
-
-    def launch_(self):
-        """
-        Launch pathway-based calculations.
-        """
-
-        # Equally spaced .xyz file with re-optimized endpoints.
-        self.M1 = os.path.join(self.home, 'respaced.xyz')
-
-        # refactored steps out to methods for easier subclassing
-        self._launch_m1()
-        self._launch_fs()
-        self._launch_interpolation()
-
-        if self.Interpolation.status != 'complete':
-            return
-
-        self._launch_interspaced()
 
 
 class Trajectory(Calculation):
@@ -1934,6 +1916,7 @@ class Trajectory(Calculation):
                 self.Pathways[label] = self._create_pathway_object(
                     Spaced, home=pathhome, name=pathname, charge=rcharge,
                     parent=self, mult=rmult, priority=self.priority, **self.kwargs)
+
                 self.Pathways[label].launch()
                 PathInfo[label] = OrderedDict(
                     [('home', pathhome), ('name', pathname), ('charge', rcharge), ('mult', rmult)])
