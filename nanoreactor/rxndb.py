@@ -1454,11 +1454,13 @@ class Interpolation(Calculation):
             M = Molecule(self.initial)
         else:
             M = deepcopy(self.initial)
-        M.write(os.path.join(self.home, '.interpolate.in.xyz'))
+        M.write(os.path.join(self.home, 'interpolate.in.xyz'))
         # Note that the "first" method and basis set is used for the geometry optimization.
         make_task(
-            "Nebterpolate.py --morse 1e-2 --repulsive --allpairs --anchor 2 .interpolate.in.xyz interpolated.xyz &> interpolate.log",
-            self.home, inputs=[".interpolate.in.xyz"], outputs=["interpolate.log", "interpolated.xyz"],
+            "Nebterpolate.py --morse 1e-2 --repulsive --allpairs --anchor 2 "
+            "interpolate.in.xyz interpolated.xyz &> interpolate.log",
+            self.home, inputs=["interpolate.in.xyz"],
+            outputs=["interpolate.log", "interpolated.xyz"],
             tag=self.name + "_interpolate", calc=self, verbose=self.verbose)
 
 
@@ -1468,6 +1470,9 @@ class Pathway(Calculation):
     of these may be created from a single reaction.xyz.
     """
     calctype = "Pathway"
+
+    # if overwritten in subclasses, we can skip relaxation of the ends
+    respaced_filename = "respaced.xyz"
 
     def countFragmentIDs(self):
         return sum([calc.status == 'converged' for calc in list(self.FragmentIDs.values())]), len(
@@ -1494,7 +1499,7 @@ class Pathway(Calculation):
         """
 
         # Equally spaced .xyz file with re-optimized endpoints.
-        self.M1 = os.path.join(self.home, 'respaced.xyz')
+        self.M1 = os.path.join(self.home, self.respaced_filename)
 
         # If this file does not exist, then we need to create it.
         if not os.path.exists(self.M1):
@@ -1503,10 +1508,12 @@ class Pathway(Calculation):
                 self.M0 = deepcopy(self.initial)
             else:
                 self.M0 = Molecule(self.initial)
+
             self.synchronizeChargeMult(self.M0)
             if self.charge == -999:
                 self.saveStatus('failed', message='Charge and spin inconsistent')
                 return
+
             # Continue optimizations of endpoints.
             if not hasattr(self, 'Optimizations'):
                 self.Optimizations = OrderedDict()
@@ -1827,9 +1834,11 @@ class Trajectory(Calculation):
                 for P in list(self.Pathways.values()):
                     P.launch()
                 return
+
         # If the cached path information doesn't exist or something went wrong, then we determine all of the pathways.
         PathInfo = OrderedDict()
         logger.info("Identifying pathways for trajectory %s" % self.name, printlvl=1)
+
         # Create a Molecule object for each optimized .xyz file.
         # Note that topology is determined by the final frame
         OptMols = OrderedDict()
@@ -1842,6 +1851,7 @@ class Trajectory(Calculation):
             if self.charge == -999:
                 self.saveStatus('failed', message='Charge and spin inconsistent')
                 return
+
         # Identify all potential initial and final frames of pathways
         # Each initial pathway frame is the final frame of a given catchment basin, up to (N-1)
         # Each final pathway frame is the initial frame of a given catchment basin, starting from the 2nd one
@@ -1852,6 +1862,7 @@ class Trajectory(Calculation):
                 # fi and fj mark the boundaries of a difference in catchment basin
                 path_initial.append(fi)
                 path_final.append(fj)
+
         # We now have a potential explosion in the number of pathways.  For all pathways
         # that begin and end in the same pair of molecules, we pick out the one that is
         # separated by the smallest number of frames.
@@ -1860,7 +1871,8 @@ class Trajectory(Calculation):
         for fi in path_initial:
             for fj in path_final:
                 if fj > fi and (not self.Equal(OptMols[fi], OptMols[fj])):
-                    if (fj - fi) > self.pathmax: continue
+                    if (fj - fi) > self.pathmax:
+                        continue
                     NewPair = True
                     for imp, (m1, m2) in enumerate(MolPairs):
                         if self.Equal(OptMols[fi], m1) and self.Equal(OptMols[fj], m2):
@@ -1893,12 +1905,14 @@ class Trajectory(Calculation):
             # for now I need to pop off the qm_mulliken_*
             Raw_Joined = (OptMols[fi][::-1].without('qm_mulliken_charges', 'qm_mulliken_spins') + self.M[fi:fj] +
                           OptMols[fj].without('qm_mulliken_charges', 'qm_mulliken_spins'))
+
             # Identify the atoms that reacted (i.e. remove spectators)
             # There is sometimes more than one reacting group if multiple concurrent reactions occur
             if self.spectators:
                 reacting_groups = [(list(range(OptMols[fi][-1].na)), self.charge, self.mult)]
             else:
                 reacting_groups = find_reacting_groups(OptMols[fi][-1], OptMols[fj][-1])
+
             for rgrp, (ratoms, rcharge, rmult) in enumerate(reacting_groups):
                 Joined = Raw_Joined.atom_select(ratoms)
                 # Write the "joined" pathway and the "equally spaced pathway"
