@@ -2,18 +2,13 @@
 
 import argparse
 import os
-import re
 import sys
 import time
 from collections import OrderedDict
 
 import numpy as np
-
-# New imports so process_spins will work
-from nanoreactor.molecule import Elements, Molecule, extract_int
 from nanoreactor.output import logger
 from nanoreactor.reaction_ase_compatible import ProcessTrajectory
-# Utility functions and classes used to be a part of this script
 from nanoreactor.rxndb import create_work_queue, get_trajectory_home, parse_input_files, wq_reactor
 
 
@@ -67,75 +62,31 @@ def parse_command():
     return args
 
 
-def process_spins(trajectory_fnms):
-    newtrajectory_fnms = []
-    logger.info("Pre-processing spins of trajectories")
-    for i in range(len(trajectory_fnms)):
-        M = Molecule(trajectory_fnms[i])
-
-        # Read in the charge and spin on the whole system.
-        srch = lambda s: np.array(
-            [float(re.search('(?<=%s )[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?' % s, c).group(0)) for c in M.comms if
-             all([k in c for k in ('charge', 'sz')])])
-        Chgs = srch('charge')  # An array of the net charge.
-        SpnZs = srch('sz')  # An array of the net Z-spin.
-
-        chg, chgpass = extract_int(Chgs, 0.3, 1.0, label="charge", verbose=False)
-        spn, spnpass = extract_int(abs(SpnZs), 0.3, 1.0, label="spin-z", verbose=False)
-
-        nproton = sum([Elements.index(j) for j in M.elem])
-        nelectron = nproton + chg
-        # Calculate the new spins if spins are inconsistent. Extracts all spin values from trajectory file, and uses
-        # the absolute values of all spin/charge-appropriate rounded spin values.
-        if not spnpass:
-            logger.info("Generating new spins for " + trajectory_fnms[i])
-            newspins = []
-            for spinnew in SpnZs:
-                spinnew = int(round(spinnew))
-                if ((nelectron - spinnew) / 2) * 2 != (nelectron - spinnew):
-                    continue
-                if abs(spinnew) in newspins:
-                    continue
-                else:
-                    newspins.append(abs(spinnew))
-            # Write new trajectory files for new spins and add to trajectory list
-            for spinrpl in newspins:
-                for j in range(len(M.comms)):
-                    M.comms[j] = re.sub('(?<=%s )[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?' % "sz", str(float(spinrpl)),
-                                        M.comms[j])
-                newfilename = os.path.splitext(trajectory_fnms[i])[0] + "_SZ" + str(spinrpl) + \
-                              os.path.splitext(trajectory_fnms[i])[1]
-                M.write(newfilename)
-                newtrajectory_fnms.append(newfilename)
-            # Move original trajectory file to *.parent and exclude it from the trajectory list
-            # os.rename(trajectory_fnms[i], trajectory_fnms[i]+".parent")
-        else:
-            newtrajectory_fnms.append(trajectory_fnms[i])
-    return newtrajectory_fnms
-
-
 def main():
     # global WQ
     # Get command line arguments.
     args = parse_command()
     if args.draw == 3: args.fast_restart = False
+
     # Set verbosity level
     logger.set_verbosity(args.verbose)
+
     # Create the Work Queue.
     if args.port != 0:
         create_work_queue(args.port)
         # print "Created WQ"
         # print WQ
         # sys.exit()
+
     # Obtain a list of dynamics trajectory files.
     trajectory_fnms = parse_input_files(args.input)
-    # Pre-process files to modify spins if inappropriate
-    trajectory_fnms = process_spins(trajectory_fnms)
+
     # We have the options of doing the smallest trajectories first.
     if args.small_first:
         order = list(np.argsort([int(open(fnm).next().split()[0]) for fnm in trajectory_fnms]))
     else:
         order = list(range(len(trajectory_fnms)))
+
     # Execute calculations.
     Trajectories = OrderedDict()
     t0 = time.time()
@@ -153,11 +104,13 @@ def main():
                                                   gsmax=args.gsmax, trivial=args.trivial, ts_branch=args.ts_branch,
                                                   spectators=args.spectators)
         Trajectories[xyzname].launch()
+
         # Enter the reactor loop once in a while so we don't waste
         # time during the setup phase.
         if (args.port != 0) and ((time.time() - t0) > 60):
             wq_reactor(wait_time=1, iters=10)
             t0 = time.time()
+
     # Enter the reactor loop.
     if args.port != 0:
         wq_reactor()
