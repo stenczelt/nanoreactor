@@ -1509,6 +1509,9 @@ class Pathway(Calculation):
 
         pass
 
+    def _create_optimization_object(self, **kwargs):
+        return Optimization(**kwargs)
+
     def launch_(self):
         """
         Launch pathway-based calculations.
@@ -1533,10 +1536,12 @@ class Pathway(Calculation):
             # Continue optimizations of endpoints.
             if not hasattr(self, 'Optimizations'):
                 self.Optimizations = OrderedDict()
-                self.Optimizations[0] = Optimization(initial=self.M0[0], home=os.path.join(self.home, "opt-init"),
-                                                     parent=self, priority=self.priority + 1000, **self.kwargs)
-                self.Optimizations[1] = Optimization(initial=self.M0[-1], home=os.path.join(self.home, "opt-final"),
-                                                     parent=self, priority=self.priority + 1000, **self.kwargs)
+                self.Optimizations[0] = self._create_optimization_object(
+                    initial=self.M0[0], home=os.path.join(self.home, "opt-init"),
+                    parent=self, priority=self.priority + 1000, **self.kwargs)
+                self.Optimizations[1] = self._create_optimization_object(
+                    initial=self.M0[-1], home=os.path.join(self.home, "opt-final"),
+                    parent=self, priority=self.priority + 1000, **self.kwargs)
                 for calc in list(self.Optimizations.values()):
                     calc.launch()
                 return
@@ -1545,7 +1550,7 @@ class Pathway(Calculation):
                     [calc.status == 'converged' for calc in list(self.Optimizations.values())]):
                 OptMols = OrderedDict()
                 for frm, calc in list(self.Optimizations.items()):
-                    OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize.xyz'), topframe=-1)
+                    OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize_optim.xyz'), topframe=-1)
                     OptMols[frm].load_popxyz(os.path.join(calc.home, 'optimize.pop'))
 
                 # Catch the *specific case* that after reoptimizing the
@@ -1744,6 +1749,9 @@ class Trajectory(Calculation):
                         "=> Frame %s -> %s: Reaction %s; Delta-H (0K) = %.4f kcal/mol; Delta-G (STP) = %.4f kcal/mol"
                         % (fi, fj, strrxn, DeltaE, self.DeltaG))
 
+    def _create_optimization_object(self, **kwargs):
+        return Optimization(**kwargs)
+
     def makeOptimizations(self):
         """ Create and launch geometry optimizations.  This code is called ONCE per trajectory. """
         self.Optimizations = OrderedDict()
@@ -1760,8 +1768,9 @@ class Trajectory(Calculation):
             # oname = self.name + ("/optimize_%%0%ii" % self.fdigits % frm)
             logger.info("Geometry optimization in %s" % (ohome), printlvl=3)
             # Note: This code may return to the parent and rerun Trajectory.launch() before the dictionary is filled.
-            self.Optimizations[frm] = Optimization(initial=self.M[frm], name=oname, home=ohome,
-                                                   parent=self, priority=self.priority, **self.kwargs)
+            self.Optimizations[frm] = self._create_optimization_object(
+                initial=self.M[frm], name=oname, home=ohome,
+                parent=self, priority=self.priority, **self.kwargs)
             self.Optimizations[frm].launch()
 
     def _create_pathway_object(self, *args, **kwargs):
