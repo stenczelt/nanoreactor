@@ -28,7 +28,22 @@ Pathway() is called:
 """
 import os
 
-from .rxndb import Calculation, Pathway, Trajectory
+from .rxndb import Calculation, Optimization, Pathway, Trajectory, make_task
+
+
+class OptimzationGeomeTRIC(Optimization):
+    initial_filename = 'initial.xyz'
+    optimized_filename = 'optimize_optim.xyz'
+    log_filename = 'optimize.log'
+
+    def launch_task(self):
+        # take the optins passed from cli to cli
+        opts = self.kwargs.get("geometric_opts")
+
+        make_task(
+            f"geometric-optimize {self.initial_filename} --engine ase --prefix=optimize {opts}",
+            self.home, inputs=[self.initial_filename], outputs=[self.optimized_filename, self.log_filename],
+            tag=self.name, calc=self, verbose=self.verbose)
 
 
 class PreparePathway(Pathway):
@@ -38,6 +53,9 @@ class PreparePathway(Pathway):
     def launch_fs(self):
         # we are skipping this for this implementation
         pass
+
+    def _create_optimization_object(self, **kwargs):
+        return OptimzationGeomeTRIC(**kwargs)
 
     def launch_gs(self, inter_spaced):
         if not hasattr(self, 'GS'):
@@ -54,6 +72,11 @@ class ProcessTrajectory(Trajectory):
     do the bare minimum needed for ML models rather than everything.
     """
 
+    optimize_filename = 'optimize_optim.xyz'
+
+    def _create_optimization_object(self, **kwargs):
+        return OptimzationGeomeTRIC(**kwargs)
+
     def _create_pathway_object(self, *args, **kwargs):
         return PreparePathway(*args, **kwargs)
 
@@ -61,4 +84,4 @@ class ProcessTrajectory(Trajectory):
 class GrowingString(Calculation):
 
     def launch_(self):
-        raise NotImplementedError
+        pass

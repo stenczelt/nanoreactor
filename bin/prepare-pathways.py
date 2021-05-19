@@ -58,6 +58,12 @@ def parse_command():
     parser.add_argument('--spectators', action='store_true', help='Keep spectators as part of the reaction')
     parser.add_argument('--ts_branch', action='store_true',
                         help='Transition state calculations branch off growing string segments and run in parallel; faster but less efficient')
+
+    grp_opt = parser.add_argument_group('Geometry Optimization', 'Control the GeomeTRIC optimizer bash call')
+    grp_opt.add_argument("--geometric", type=str,
+                         default="",
+                         help="command line arguments for geometric-optimize executable")
+
     args, sys.argv = parser.parse_known_args(sys.argv[1:])
     return args
 
@@ -66,7 +72,8 @@ def main():
     # global WQ
     # Get command line arguments.
     args = parse_command()
-    if args.draw == 3: args.fast_restart = False
+    if args.draw == 3:
+        args.fast_restart = False
 
     # Set verbosity level
     logger.set_verbosity(args.verbose)
@@ -102,7 +109,7 @@ def main():
                                                   pathmax=args.pathmax, priority=10 * (len(trajectory_fnms) - i),
                                                   draw=args.draw,
                                                   gsmax=args.gsmax, trivial=args.trivial, ts_branch=args.ts_branch,
-                                                  spectators=args.spectators)
+                                                  spectators=args.spectators, geometric_opts=args.geometric)
         Trajectories[xyzname].launch()
 
         # Enter the reactor loop once in a while so we don't waste

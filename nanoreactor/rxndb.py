@@ -33,10 +33,15 @@ WQ = None
 def create_work_queue(port):
     global WQ
     # Near clone of the function in nifty.py
-    if work_queue == None:
+    if work_queue is None:
         logger.error("Cannot create Work Queue because work_queue module not found")
         raise RuntimeError
-    WQ = work_queue.WorkQueue(port=port, shutdown=False)
+    name = 'refine'
+    WQ = work_queue.WorkQueue(port=port, shutdown=False,
+                              debug_log=f"{name}.debug.log",  # debug log
+                              stats_log=f"{name}.stats.log",  # stats log, for gnuplot
+                              transactions_log=f"{name}.transactions.log",  # log of transactions
+                              )
     WQ.specify_name('refine')
     WQ.specify_keepalive_interval(8640000)
     # Calculations submitted first get run first
@@ -592,6 +597,10 @@ def make_task(cmd, cwd, inputs=[], outputs=[], tag=None, calc=None, verbose=0, p
     if WQ != None:
         # Create and submit Work Queue Task object.
         task = work_queue.Task(cmd)
+
+        # max retries: up to 3x ran
+        task.specify_max_retries(2)
+
         # The task priority is either an argument or a field of the calculation object
         if priority == None:
             if calc != None:
@@ -619,11 +628,13 @@ def make_task(cmd, cwd, inputs=[], outputs=[], tag=None, calc=None, verbose=0, p
         logger.info("\x1b[94mWQ task\x1b[0m '%s'; taskid %i priority %i" % (task.tag, taskid, priority), printlvl=3)
     else:
         # Run the calculation locally.
-        if calc != None: calc.saveStatus('launch')
+        if calc != None:
+            calc.saveStatus('launch')
         _exec(cmd, print_command=(verbose >= 3), persist=True, cwd=cwd)
         # After executing the task, run launch() again
         # because launch() is designed to be multi-pass.
-        if calc != None: calc.launch()
+        if calc != None:
+            calc.launch()
 
 
 class Calculation(object):
@@ -998,6 +1009,10 @@ class Optimization(Calculation):
     calctype = "Optimization"
     statlvl = 2
 
+    initial_filename = 'initial.xyz'
+    optimized_filename = 'optimize.xyz'
+    log_filename = 'optimize.log'
+
     def __init__(self, initial, home, **kwargs):
         super(Optimization, self).__init__(initial, home, **kwargs)
         # Failure counter.  When this hits three, the calculation deletes itself :P
@@ -1009,8 +1024,8 @@ class Optimization(Calculation):
         """
         # If this method is called and optimize.xyz exists, that means
         # the optimization is completed!
-        extract_tar(os.path.join(self.home, 'optimize.tar.bz2'), ['optimize.xyz', 'optimize.pop'])
-        if os.path.exists(os.path.join(self.home, 'optimize.xyz')):
+        extract_tar(os.path.join(self.home, 'optimize.tar.bz2'), [self.optimized_filename, 'optimize.pop'])
+        if os.path.exists(os.path.join(self.home, self.optimized_filename)):
             if hasattr(self.parent, 'countOptimizations'):
                 complete, total = self.parent.countOptimizations()
                 self.saveStatus('converged', display=(self.verbose >= 2), to_disk=False,
@@ -1020,12 +1035,12 @@ class Optimization(Calculation):
             # Once ANY optimization job is finished, we pass through the parent object again.
             self.parent.launch()
             return
-        elif os.path.exists(os.path.join(self.home, 'optimize.log')):
+        elif os.path.exists(os.path.join(self.home, self.log_filename)):
             self.fails += 1
-            logger.info(
-                "%s has optimize.log but not optimize.xyz - it may have failed (%i tries)" % (self.name, self.fails))
-            shutil.move(os.path.join(self.home, 'optimize.log'),
-                        os.path.join(self.home, 'optimize.%i.log' % self.fails))
+            logger.info(f"{self.name} has logfile ({self.log_filename}) but "
+                        f"not XYZ ({self.optimized_filename}) - it may have failed ({self.fails:d} tries)")
+            shutil.move(os.path.join(self.home, self.log_filename),
+                        os.path.join(self.home, f'optimize.{self.fails:d}.log'))
             # Optimizations can fail for a number of reasons.  If the
             # Q-Chem job crashes because it's not set up correctly, we
             # get a nasty failure.  We also get a failure if the
@@ -1055,12 +1070,18 @@ class Optimization(Calculation):
         if len(M) != 1:
             logger.error("Optimization can only handle length-1 Molecule objects")
             raise RuntimeError
-        M.write(os.path.join(self.home, 'initial.xyz'))
+        M.write(os.path.join(self.home, self.initial_filename))
+
+        # launch the optimisation
+        self.launch_task()
+
+    def launch_task(self):
         # Note that the "first" method and basis set is used for the geometry optimization.
-        make_task("optimize-geometry.py initial.xyz --method %s --basis \"%s\" --charge %i --mult %i &> optimize.log" %
-                  (self.methods[0], self.bases[0], self.charge, self.mult),
-                  self.home, inputs=["initial.xyz"], outputs=["optimize.log", "optimize.tar.bz2"],
-                  tag=self.name, calc=self, verbose=self.verbose)
+        make_task(
+            f"optimize-geometry.py {self.initial_filename} --method {self.methods[0]} --basis \"{self.bases[0]}\" "
+            f"--charge {self.charge:d} --mult {self.mult:d} &> {self.log_filename}",
+            self.home, inputs=[self.initial_filename], outputs=[self.log_filename, "optimize.tar.bz2"],
+            tag=self.name, calc=self, verbose=self.verbose)
 
 
 class TransitionState(Calculation):
@@ -1458,7 +1479,7 @@ class Interpolation(Calculation):
         # Note that the "first" method and basis set is used for the geometry optimization.
         make_task(
             "Nebterpolate.py --morse 1e-2 --repulsive --allpairs --anchor 2 "
-            "interpolate.in.xyz interpolated.xyz &> interpolate.log",
+            "interpolate.in.xyz interpolated.xyz > interpolate.log",
             self.home, inputs=["interpolate.in.xyz"],
             outputs=["interpolate.log", "interpolated.xyz"],
             tag=self.name + "_interpolate", calc=self, verbose=self.verbose)
@@ -1608,6 +1629,9 @@ class Trajectory(Calculation):
     result in individual reaction pathways.
     """
     calctype = "Trajectory"
+
+    # filenames recognised for the used classes (Pathway, Opt, ...)
+    optimize_filename = 'optimize.xyz'
 
     def __init__(self, initial, home, **kwargs):
         """
@@ -1861,7 +1885,7 @@ class Trajectory(Calculation):
         for frm, calc in list(self.Optimizations.items()):
             if calc.status == 'failed':
                 continue
-            OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize.xyz'), topframe=-1)
+            OptMols[frm] = Molecule(os.path.join(calc.home, 'optimize_optim.xyz'), topframe=-1)
             OptMols[frm].load_popxyz(os.path.join(calc.home, 'optimize.pop'))
             self.synchronizeChargeMult(OptMols[frm])
             if self.charge == -999:
@@ -1977,7 +2001,7 @@ class Trajectory(Calculation):
         # need to cycle through again.
         else:
             for calc in list(self.Optimizations.values()):
-                if os.path.exists(os.path.join(calc.home, 'optimize.xyz')):
+                if os.path.exists(os.path.join(calc.home, self.optimize_filename)):
                     complete, total = self.countOptimizations()
                     calc.saveStatus('converged', display=(self.verbose >= 2), to_disk=False,
                                     message='%i/%i complete' % (complete + 1, total))
