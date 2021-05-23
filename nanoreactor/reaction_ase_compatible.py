@@ -26,18 +26,21 @@ Pathway() is called:
 - 21 interspaced.xyz : re-spaced version of the output of nebterpolation
 
 """
+from copy import deepcopy
+
 import os
 
+from .molecule import Molecule
 from .rxndb import Calculation, Optimization, Pathway, Trajectory, make_task
 
 
-class OptimzationGeomeTRIC(Optimization):
+class OptimizationGeomeTRIC(Optimization):
     initial_filename = 'initial.xyz'
     optimized_filename = 'optimize_optim.xyz'
     log_filename = 'optimize.log'
 
     def launch_task(self):
-        # take the optins passed from cli to cli
+        # take the options passed from cli to cli
         opts = self.kwargs.get("geometric_opts")
 
         make_task(
@@ -55,14 +58,24 @@ class PreparePathway(Pathway):
         pass
 
     def _create_optimization_object(self, **kwargs):
-        return OptimzationGeomeTRIC(**kwargs)
+        return OptimizationGeomeTRIC(**kwargs)
 
     def launch_gs(self, inter_spaced):
         if not hasattr(self, 'GS'):
             self.GS = GrowingString(inter_spaced, home=os.path.join(self.home, 'GS'),
                                     parent=self, charge=self.charge, mult=self.mult,
-                                    stability_analysis=True, priority=self.priority, **self.kwargs)
+                                    stability_analysis=True, priority=self.priority,
+                                    use_path_guess=True,
+                                    **self.kwargs)
             self.GS.launch()
+
+        if not hasattr(self, 'GS-ends-only'):
+            self.GS_ends_only = GrowingString(inter_spaced, home=os.path.join(self.home, 'GS-ends-only'),
+                                              parent=self, charge=self.charge, mult=self.mult,
+                                              stability_analysis=True, priority=self.priority,
+                                              use_path_guess=False,
+                                              **self.kwargs)
+            self.GS_ends_only.launch()
 
 
 class ProcessTrajectory(Trajectory):
@@ -75,13 +88,53 @@ class ProcessTrajectory(Trajectory):
     optimize_filename = 'optimize_optim.xyz'
 
     def _create_optimization_object(self, **kwargs):
-        return OptimzationGeomeTRIC(**kwargs)
+        return OptimizationGeomeTRIC(**kwargs)
 
     def _create_pathway_object(self, *args, **kwargs):
         return PreparePathway(*args, **kwargs)
 
 
 class GrowingString(Calculation):
+    """Growing string, can represent both one with a guessed path and one with no guess of the path"""
+
+    calctype = "GrowingString"
+
+    filename_log = "gsm.log"
+    filename_initial = "initial.xyz"
 
     def launch_(self):
-        pass
+
+        if os.path.exists(os.path.join(self.home, self.filename_log)) and os.path.exists(
+                os.path.join(self.home, "opt_converged_000.xyz")):
+            # calculation is done
+            self.saveStatus("complete")
+
+        else:
+            # set up the calculations
+            if not isinstance(self.initial, Molecule):
+                mol = Molecule(self.initial)
+            else:
+                mol = deepcopy(self.initial)
+
+            # write the starting configs
+            restart_str = ""
+            if self.kwargs.get("use_path_guess", True):
+                # use the guess of path given
+                mol.write(os.path.join(self.home, self.filename_initial))
+                restart_str = f"-restart_file {self.filename_initial} -reparametrize"
+            else:
+                # only write start and end
+                mol_ends = mol[0] + mol[-1]
+                mol_ends.write(os.path.join(self.home, self.filename_initial))
+
+            # the ASE calculator options are the same for this as for geomeTRIC
+            opts = self.kwargs.get("geometric_opts")
+
+            # launch the task
+            make_task(
+                f"gsm -xyzfile {self.filename_initial} {restart_str} -mode DE_GSM -num_nodes {self.images} {opts}"
+                f" -ID 0 -coordinate_type TRIC -package ase -max_gsm_iters {self.gsmax} > {self.filename_log}",
+                self.home, inputs=["initial.xyz"],
+                outputs=["0000_string.png", "IC_data_0000.txt", "opt_converged_000.xyz", "TSnode_0.xyz",
+                         self.filename_log],
+                tag=self.name, calc=self, verbose=self.verbose)
